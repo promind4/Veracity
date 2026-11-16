@@ -8,6 +8,7 @@ export async function readSource(url: string, key: string | undefined, fetchFn: 
     method: 'POST',
     headers: { ...(key ? { Authorization: `Bearer ${key}` } : {}), Accept: 'application/json', 'Content-Type': 'application/json' },
     body: JSON.stringify({ url, noCache: true }),
+    signal: AbortSignal.timeout(8_000),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const payload: { data?: { content?: string; publishedTime?: string } } = await res.json();
