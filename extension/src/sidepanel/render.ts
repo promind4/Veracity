@@ -134,7 +134,7 @@ export function renderIdle(root: HTMLElement, message?: string): void {
     ? `<div class="idle"><h1>Veracity</h1><p class="muted">${esc(message)}</p></div>`
     : `<div class="idle"><h1>Veracity</h1><p>Vérifie les affirmations de cette vidéo et la façon dont elles sont présentées.</p>
        <button class="primary" data-action="analyze">Analyser cette vidéo</button>
-       <p><button data-action="open-channels">📺 Évaluer toute la chaîne</button></p>
+       <p><button data-action="open-channels">📺 Évaluer la chaîne</button></p>
        <p class="muted">Tu peux aussi discuter de la vidéo ou lire sa transcription sans lancer la vérification.</p></div>`;
 }
 
