@@ -44,6 +44,7 @@ export function buildExtractionMessages(video: VideoInput, transcript: string, c
 
 <titre>${video.title}</titre>
 <chaine>${video.author}</chaine>
+${video.publishedAt ? `<date_publication>${video.publishedAt}</date_publication>` : ''}
 <description>
 ${video.description.slice(0, 5000)}
 </description>
