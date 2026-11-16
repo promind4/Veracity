@@ -48,6 +48,7 @@ export async function analyzeVideo(
     author: video.author,
     createdAt: new Date().toISOString(),
     models: [...new Set([extractModel, verifyModel].filter(Boolean))],
+    modelsByStage: { extraction: extractModel, verification: verifyModel },
     summary: extraction.summary,
     category: extraction.category || undefined,
     tags: extraction.tags,
