@@ -92,7 +92,7 @@ export async function gatherEvidence(
     }
     for (const q of claim.queries) found.push(...(await webSearch(q, providers, warnings)));
     const items = dedupe(found).slice(0, MAX_EVIDENCE_PER_CLAIM);
-    if (claim.timeSensitive && keys.jinaKey) {
+    if (claim.timeSensitive) {
       // Lecture bornée à deux pages pour ne pas multiplier les appels ni les délais.
       for (const it of items.filter((item) => item.source !== 'factcheck').slice(0, 2)) {
         try {
