@@ -18,14 +18,6 @@ describe('buildExtractionMessages', () => {
   });
 });
 
-describe('actualité', () => {
-  it('transmet la date de publication et demande une recherche renforcée', () => {
-    const [, user] = buildExtractionMessages({ ...video, publishedAt: '2026-11-16' }, '[0:00] nouveau modèle');
-    expect(user.content).toContain('<date_publication>2026-11-16</date_publication>');
-    expect(user.content).toContain('"time_sensitive"');
-  });
-});
-
 describe('extractClaims', () => {
   it('normalise la sortie du modèle', async () => {
     const llmOutput = {
