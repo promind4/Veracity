@@ -1,6 +1,7 @@
 import { mapLimit } from '../async';
 import { type Claim, type Evidence, type FetchFn, type RawEvidence, UserError } from '../types';
 import { factCheckSearch } from './factcheck';
+import { readSource } from './read';
 import { jinaSearch } from './jina';
 import { scraperSearch } from './scraperapi';
 import { serperSearch } from './serper';
@@ -90,11 +91,24 @@ export async function gatherEvidence(
       }
     }
     for (const q of claim.queries) found.push(...(await webSearch(q, providers, warnings)));
+    const items = dedupe(found).slice(0, MAX_EVIDENCE_PER_CLAIM);
+    if (claim.timeSensitive && keys.jinaKey) {
+      // Lecture bornée à deux pages pour ne pas multiplier les appels ni les délais.
+      for (const it of items.filter((item) => item.source !== 'factcheck').slice(0, 2)) {
+        try {
+          const page = await readSource(it.url, keys.jinaKey, fetchFn);
+          it.snippet = `${it.snippet}\n\nExtrait de la page : ${page.content}`.slice(0, 3500);
+          it.date = page.date ?? it.date;
+        } catch {
+          warnings.add('Lecture complète de certaines sources récentes impossible ; seuls leurs extraits sont disponibles.');
+        }
+      }
+    }
     opts.onClaimDone?.(++done, checkable.length);
-    return { claim, items: dedupe(found).slice(0, MAX_EVIDENCE_PER_CLAIM) };
+    return { claim, items };
   });
 
   let n = 0;
-  const evidence = perClaim.flatMap(({ claim, items }) => items.map((it) => ({ ...it, id: `E${++n}`, claimId: claim.id })));
+  const evidence = perClaim.flatMap(({ claim, items }) => items.map((it) => ({ ...it, id: `E${++n}`, claimId: claim.id, retrievedAt: new Date().toISOString() })));
   return { evidence, warnings: [...warnings] };
 }
