@@ -14,14 +14,14 @@ export interface SearchKeys {
 
 interface Provider {
   name: string;
-  run: (q: string) => Promise<RawEvidence[]>;
+  run: (q: string, recent?: boolean) => Promise<RawEvidence[]>;
 }
 
 export const MAX_EVIDENCE_PER_CLAIM = 6;
 
 function buildProviders(keys: SearchKeys, lang: string, fetchFn: FetchFn): Provider[] {
   const providers: Provider[] = [];
-  if (keys.serperKey) providers.push({ name: 'Serper', run: (q) => serperSearch(q, keys.serperKey!, lang, fetchFn) });
+  if (keys.serperKey) providers.push({ name: 'Serper', run: (q, recent) => serperSearch(q, keys.serperKey!, lang, fetchFn, recent) });
   if (keys.jinaKey) providers.push({ name: 'Jina', run: (q) => jinaSearch(q, keys.jinaKey!, fetchFn) });
   if (keys.scraperapiKey) providers.push({ name: 'ScraperAPI', run: (q) => scraperSearch(q, keys.scraperapiKey!, lang, fetchFn) });
   return providers;
@@ -70,6 +70,18 @@ export async function gatherEvidence(
   let done = 0;
   const perClaim = await mapLimit(checkable, opts.concurrency ?? 3, async (claim) => {
     const found: RawEvidence[] = [];
+    // Un premier résultat ancien ne doit pas masquer une annonce récente chez un autre fournisseur.
+    if (claim.timeSensitive) {
+      const current = await Promise.all(providers.map(async (p) => {
+        try {
+          return await p.run(claim.queries[0] ?? claim.claim, true);
+        } catch (e) {
+          warnings.add(`Recherche récente ${p.name} en échec : ${(e as Error).message}`);
+          return [];
+        }
+      }));
+      found.push(...dedupe(current.flat()).slice(0, 4));
+    }
     if (keys.factcheckKey) {
       try {
         found.push(...(await factCheckSearch(claim.queries[0], keys.factcheckKey, lang, fetchFn)));
