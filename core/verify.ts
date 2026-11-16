@@ -142,6 +142,7 @@ export function combineVerdicts(passes: ClaimVerdict[][], claims: Claim[]): Clai
 export interface VerifyResult {
   verdicts: ClaimVerdict[];
   model: string;
+  models: string[];
   /** Verdicts de chaque passage réussi, pour mesurer l'écart entre eux. */
   passes: ClaimVerdict[][];
   failedPasses: number;
@@ -162,7 +163,7 @@ export async function verifyClaims(
   opts: VerifyOptions = {},
 ): Promise<VerifyResult> {
   const checkable = claims.filter((c) => c.type !== 'opinion');
-  if (!checkable.length) return { verdicts: [], model: '', passes: [], failedPasses: 0 };
+  if (!checkable.length) return { verdicts: [], model: '', models: [], passes: [], failedPasses: 0 };
   const today = opts.today ?? new Date().toISOString().slice(0, 10);
   const outcomes = await mapLimit(Array.from({ length: Math.max(1, opts.passes ?? 1) }), 2, async (_, i) => {
     const ordered = i % 2 === 0 ? checkable : [...checkable].reverse();
@@ -177,5 +178,5 @@ export async function verifyClaims(
   const done = outcomes.flatMap((o) => (o.ok ? [o] : []));
   if (!done.length) throw (outcomes.find((o) => !o.ok) as { error: unknown }).error;
   const passes = done.map((o) => o.verdicts);
-  return { verdicts: combineVerdicts(passes, checkable), model: done[0].model, passes, failedPasses: outcomes.length - done.length };
+  return { verdicts: combineVerdicts(passes, checkable), model: done[0].model, models: [...new Set(done.map((o) => o.model))], passes, failedPasses: outcomes.length - done.length };
 }
