@@ -52,6 +52,8 @@ export interface Claim {
   type: ClaimType;
   importance: number;
   queries: string[];
+  /** Affirmation concernant une annonce ou une information susceptible d'avoir changé récemment. */
+  timeSensitive?: boolean;
 }
 
 export interface RhetoricItem {
@@ -118,6 +120,8 @@ export interface Report {
   author: string;
   createdAt: string;
   models: string[];
+  /** Modèles réellement utilisés à chaque étape, y compris après un repli. */
+  modelsByStage?: { extraction: string; verification: string };
   summary: string;
   category?: string;
   tags?: string[];
