@@ -20,6 +20,7 @@
     "https://openrouter.ai/*",
     "https://google.serper.dev/*",
     "https://s.jina.ai/*",
+    "https://r.jina.ai/*",
     "https://api.scraperapi.com/*",
     "https://factchecktools.googleapis.com/*",
     "https://generativelanguage.googleapis.com/*"
