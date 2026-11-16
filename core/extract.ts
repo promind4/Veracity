@@ -94,7 +94,7 @@ export async function extractClaims(
       claim: c.claim,
       type: c.type,
       importance: c.importance,
-      timeSensitive: c.time_sensitive,
+      ...(c.time_sensitive ? { timeSensitive: true } : {}),
       queries: queries.length ? queries : [c.claim],
     };
   });
