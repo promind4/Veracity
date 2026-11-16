@@ -34,7 +34,7 @@ describe('buildVerifyMessages', () => {
     const video: VideoInput = { videoId: 'v', title: 'T', author: 'A', description: '', durationS: 0, language: 'fr', segments: [] };
     const [, user] = buildVerifyMessages(video, claims, evidence, '2026-10-11');
     expect(user.content).toContain('### C1 (fait) : « Shopify fondé en 2006 »');
-    expect(user.content).toContain('[E1] Shopify (fr.wikipedia.org)');
+    expect(user.content).toContain('[E1] Shopify (fr.wikipedia.org ; publication indiquée : inconnue)');
     expect(user.content).toContain('[E2] FACT-CHECK AFP, verdict « Faux »');
     expect(user.content).toContain('### C3 (promesse_commerciale)');
     expect(user.content).toContain('(aucune preuve trouvée)');
