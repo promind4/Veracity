@@ -76,6 +76,20 @@ describe('gatherEvidence', () => {
     expect(evidence[0].retrievedAt).toEqual(expect.any(String));
   });
 
+  it('conserve les résultats si la lecture de la page récente échoue', async () => {
+    const fetchFn = vi.fn(async (input: string | URL | Request) => {
+      if (String(input).includes('r.jina.ai')) return new Response('indisponible', { status: 503 });
+      return new Response(JSON.stringify({ organic: [{ link: 'https://source.example/annonce', title: 'Annonce', snippet: 'Modèle disponible' }] }));
+    });
+    const { evidence, warnings } = await gatherEvidence(
+      [{ ...claim('C1', 'fait', ['nouveau modèle']), timeSensitive: true }],
+      { serperKey: 's' }, 'fr', { fetchFn: fetchFn as typeof fetch },
+    );
+    expect(evidence).toHaveLength(1);
+    expect(evidence[0].snippet).toBe('Modèle disponible');
+    expect(warnings).toContain('Lecture complète de certaines sources récentes impossible ; seuls leurs extraits sont disponibles.');
+  });
+
   it('exige au moins une clé de recherche', async () => {
     await expect(gatherEvidence([claim('C1', 'fait', ['q'])], {}, 'fr')).rejects.toMatchObject({ code: 'config' });
   });
