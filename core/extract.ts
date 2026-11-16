@@ -22,6 +22,7 @@ const ExtractionSchema = z.object({
         claim: z.string().min(3),
         type: enumOf(CLAIM_TYPES, 'fait'),
         importance: z.coerce.number().int().min(1).max(3).catch(2),
+        time_sensitive: z.boolean().optional().default(false),
         queries: z.array(z.string()).default([]),
       }),
     )
@@ -59,7 +60,7 @@ Tâches :
    - "type" : "fait" (vérifiable objectivement), "promesse_commerciale" (gains, résultats, offres, garanties) ou "opinion" (jugement subjectif).
    - "importance" : 1 (détail ou contexte), 2 (notable) ou 3 (central : la thèse de la vidéo ou un argument qui la soutient). Un fait de contexte (date d'un livre cité, biographie, historique) vaut 1, même s'il est souvent répété.
    - Si la vidéo défend une thèse factuelle (« la Terre est plate », « ce traitement guérit X », « cette crypto va faire x100 »), inclus cette thèse elle-même comme affirmation d'importance 3.
-   - "queries" : 1 ou 2 requêtes Google courtes, dans la langue la plus pertinente pour trouver des sources fiables. Pour une annonce récente (modèle, produit, étude, réglementation), inclure le nom exact et, si pertinent, son éditeur ou son organisme afin de retrouver l'annonce officielle.
+   - "time_sensitive" : true si la vérité de l’affirmation peut changer rapidement (annonce de sortie, lancement, disponibilité, version, prix, loi récente, événement en cours), false pour un fait historique ou stable. Cela déclenche une recherche web renforcée.\n   - "queries" : 1 ou 2 requêtes Google courtes, dans la langue la plus pertinente pour trouver des sources fiables. Pour une annonce récente (modèle, produit, étude, réglementation), inclure le nom exact et, si pertinent, son éditeur ou son organisme afin de retrouver l'annonce officielle.
    - N'extrais pas les modalités d'une offre (prix, réduction, places restantes, date limite) : elles relèvent de "rhetoric", pas de "claims".
    - Préfère les affirmations sur le monde (chiffres, lois, études, événements) aux détails de la vie privée de l'auteur, sauf s'ils servent d'argument central (revenus mis en avant pour vendre, par exemple).
 3. "rhetoric" : les procédés de persuasion ou de manipulation présents. "technique" parmi :
@@ -70,7 +71,7 @@ Tâches :
 ${categoryInstructions(categories)}
 
 Réponds UNIQUEMENT avec ce JSON :
-{"summary":"...","category":"...","tags":["..."],"claims":[{"t":0,"quote":"...","claim":"...","type":"fait","importance":2,"queries":["..."]}],"rhetoric":[{"t":0,"technique":"urgence","quote":"...","explanation":"..."}]}`;
+{"summary":"...","category":"...","tags":["..."],"claims":[{"t":0,"quote":"...","claim":"...","type":"fait","importance":2,"time_sensitive":false,"queries":["..."]}],"rhetoric":[{"t":0,"technique":"urgence","quote":"...","explanation":"..."}]}`;
   return [
     { role: 'system', content: SYSTEM_PROMPT },
     { role: 'user', content: user },
@@ -93,6 +94,7 @@ export async function extractClaims(
       claim: c.claim,
       type: c.type,
       importance: c.importance,
+      timeSensitive: c.time_sensitive,
       queries: queries.length ? queries : [c.claim],
     };
   });
