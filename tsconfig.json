@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "DOM.AsyncIterable"],
+    "types": ["chrome", "node"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["core", "extension", "scripts", "tests", "vite.config.ts", "vitest.config.ts"]
+}

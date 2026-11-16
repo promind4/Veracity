@@ -1,0 +1,36 @@
+[
+  {
+    "id": "Iun1QLA43xE",
+    "note": "ScienceEtonnante — L'Eau et la Vie : vulgarisation scientifique rigoureuse",
+    "facts": [75, 100],
+    "discourse": [75, 100],
+    "labels": ["Fiable"]
+  },
+  {
+    "id": "y0opgc1WoS4",
+    "note": "Kurzgesagt — Measles Explained : vulgarisation sourcée (anglais)",
+    "facts": [75, 100],
+    "discourse": [70, 100],
+    "labels": ["Fiable", "Plutôt fiable"]
+  },
+  {
+    "id": "Flrj38PSz8w",
+    "note": "100 preuves Terre plate : désinformation réfutée",
+    "facts": [0, 40],
+    "discourse": [0, 70],
+    "labels": ["Peu fiable"]
+  },
+  {
+    "id": "bvQ3deqSPnQ",
+    "note": "DEVENIR RICHE EN 2025 (Le secret révélé !) : promotion d'une formation payante",
+    "discourse": [0, 45],
+    "labels": ["Peu fiable", "À prendre avec recul", "Vrai sur le fond, mais discours très orienté", "Non évaluable : trop peu d’affirmations vérifiables"]
+  },
+  {
+    "id": "qjk6DYHZyuc",
+    "note": "CRYPTO potentiels X100 : promesses spéculatives",
+    "facts": [0, 75],
+    "discourse": [0, 50],
+    "labels": ["Peu fiable", "À prendre avec recul", "Vrai sur le fond, mais discours très orienté", "Non évaluable : trop peu d’affirmations vérifiables"]
+  }
+]

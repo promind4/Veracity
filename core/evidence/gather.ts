@@ -1,0 +1,88 @@
+import { mapLimit } from '../async';
+import { type Claim, type Evidence, type FetchFn, type RawEvidence, UserError } from '../types';
+import { factCheckSearch } from './factcheck';
+import { jinaSearch } from './jina';
+import { scraperSearch } from './scraperapi';
+import { serperSearch } from './serper';
+
+export interface SearchKeys {
+  serperKey?: string;
+  jinaKey?: string;
+  scraperapiKey?: string;
+  factcheckKey?: string;
+}
+
+interface Provider {
+  name: string;
+  run: (q: string) => Promise<RawEvidence[]>;
+}
+
+export const MAX_EVIDENCE_PER_CLAIM = 6;
+
+function buildProviders(keys: SearchKeys, lang: string, fetchFn: FetchFn): Provider[] {
+  const providers: Provider[] = [];
+  if (keys.serperKey) providers.push({ name: 'Serper', run: (q) => serperSearch(q, keys.serperKey!, lang, fetchFn) });
+  if (keys.jinaKey) providers.push({ name: 'Jina', run: (q) => jinaSearch(q, keys.jinaKey!, fetchFn) });
+  if (keys.scraperapiKey) providers.push({ name: 'ScraperAPI', run: (q) => scraperSearch(q, keys.scraperapiKey!, lang, fetchFn) });
+  return providers;
+}
+
+/** Premier fournisseur qui renvoie des résultats ; les échecs deviennent des avertissements. */
+async function webSearch(q: string, providers: Provider[], warnings: Set<string>): Promise<RawEvidence[]> {
+  for (const p of providers) {
+    try {
+      const results = await p.run(q);
+      if (results.length) return results;
+    } catch (e) {
+      warnings.add(`Recherche ${p.name} en échec : ${(e as Error).message}`);
+    }
+  }
+  return [];
+}
+
+const urlKey = (url: string) => url.replace(/#.*$/, '').replace(/\/$/, '').toLowerCase();
+
+// Une vidéo ne peut pas servir de preuve pour une autre vidéo (raisonnement circulaire).
+const VIDEO_HOSTS = /^https?:\/\/(?:[\w-]+\.)*(?:youtube\.com|youtu\.be|tiktok\.com|dailymotion\.com)\//i;
+
+function dedupe(items: RawEvidence[]): RawEvidence[] {
+  const seen = new Set<string>();
+  return items.filter((it) => {
+    const k = urlKey(it.url);
+    if (!it.url || VIDEO_HOSTS.test(it.url) || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+export async function gatherEvidence(
+  claims: Claim[],
+  keys: SearchKeys,
+  lang: string,
+  opts: { fetchFn?: FetchFn; onClaimDone?: (done: number, total: number) => void; concurrency?: number } = {},
+): Promise<{ evidence: Evidence[]; warnings: string[] }> {
+  const fetchFn = opts.fetchFn ?? fetch;
+  const providers = buildProviders(keys, lang, fetchFn);
+  if (!providers.length) throw new UserError('config', 'Aucune clé de recherche web configurée (Serper, Jina ou ScraperAPI).');
+
+  const warnings = new Set<string>();
+  const checkable = claims.filter((c) => c.type !== 'opinion');
+  let done = 0;
+  const perClaim = await mapLimit(checkable, opts.concurrency ?? 3, async (claim) => {
+    const found: RawEvidence[] = [];
+    if (keys.factcheckKey) {
+      try {
+        found.push(...(await factCheckSearch(claim.queries[0], keys.factcheckKey, lang, fetchFn)));
+      } catch (e) {
+        warnings.add(`Google Fact Check en échec : ${(e as Error).message}`);
+      }
+    }
+    for (const q of claim.queries) found.push(...(await webSearch(q, providers, warnings)));
+    opts.onClaimDone?.(++done, checkable.length);
+    return { claim, items: dedupe(found).slice(0, MAX_EVIDENCE_PER_CLAIM) };
+  });
+
+  let n = 0;
+  const evidence = perClaim.flatMap(({ claim, items }) => items.map((it) => ({ ...it, id: `E${++n}`, claimId: claim.id })));
+  return { evidence, warnings: [...warnings] };
+}

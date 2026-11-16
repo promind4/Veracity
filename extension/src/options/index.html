@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Veracity — options</title>
+    <link rel="stylesheet" href="../sidepanel/style.css" />
+    <style>
+      main { max-width: 640px; margin: 0 auto; }
+      label { display: block; margin: 12px 0 4px; font-weight: 600; }
+      input[type='password'], input[type='text'], textarea { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); font: inherit; }
+      textarea { min-height: 80px; font-family: ui-monospace, monospace; font-size: 12px; }
+      #results li { margin: 4px 0; }
+      h2 { margin-top: 24px; }
+      #userProfile { font-family: inherit; font-size: 14px; min-height: 100px; }
+      label.inline { display: flex; gap: 8px; align-items: center; font-weight: normal; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Veracity — options</h1>
+      <p class="muted">Les clés restent dans ce navigateur (stockage local de l'extension).</p>
+      <form>
+        <label for="openrouterKey">Clé OpenRouter (secours quand Gemini est saturé ; modèles gratuits, 50 requêtes par jour)</label>
+        <input id="openrouterKey" name="openrouterKey" type="password" autocomplete="off" />
+        <label for="serperKey">Clé Serper (recherche principale)</label>
+        <input id="serperKey" name="serperKey" type="password" autocomplete="off" />
+        <label for="jinaKey">Clé Jina (recherche de secours)</label>
+        <input id="jinaKey" name="jinaKey" type="password" autocomplete="off" />
+        <label for="factcheckKey">Clé Google Fact Check (fact-checks existants)</label>
+        <input id="factcheckKey" name="factcheckKey" type="password" autocomplete="off" />
+        <label for="scraperapiKey">Clé ScraperAPI (dernier recours)</label>
+        <input id="scraperapiKey" name="scraperapiKey" type="password" autocomplete="off" />
+        <label for="geminiKey">Clé Gemini (moteur principal : analyse, discussion, lexique, transcription audio, traduction, doublage ; gratuite sur aistudio.google.com)</label>
+        <input id="geminiKey" name="geminiKey" type="password" autocomplete="off" />
+        <label for="geminiKey2">Clé Gemini de secours (relais automatique quand le quota de la première est épuisé ; idéalement créée dans un autre projet Google)</label>
+        <input id="geminiKey2" name="geminiKey2" type="password" autocomplete="off" />
+        <label for="models">Modèles OpenRouter, par ordre de préférence (un par ligne)</label>
+        <textarea id="models" name="models"></textarea>
+
+        <h2>Mon profil</h2>
+        <p class="muted">Sert à adapter le Lexique et le tuteur à ton niveau (ex. « débutant en code, à l'aise en commerce, curieux de domotique »). Ce texte est envoyé aux modèles d'IA : n'y mets ni nom, ni adresse, ni donnée personnelle.</p>
+        <textarea id="userProfile" name="userProfile" maxlength="1500" placeholder="Domaines que tu maîtrises, ce que tu découvres, ton niveau…"></textarea>
+
+        <h2>Base de connaissances</h2>
+        <p class="muted">Rapports, discussions et transcriptions sont rangés par catégorie dans ce dossier (par exemple <code>D:\BDD YOUTUBE</code>). Chrome demande une autorisation : choisis « Toujours autoriser ».</p>
+        <p id="kbStatus">Aucun dossier choisi.</p>
+        <div class="actions"><button type="button" id="pickKb">Choisir le dossier de la base…</button></div>
+        <label class="inline"><input type="checkbox" name="autoSave" /> Enregistrer automatiquement les rapports et les discussions</label>
+
+        <h2>Doublage vocal</h2>
+        <p class="muted">Lit la traduction à voix haute, synchronisée avec la vidéo (bouton « Doublage » de l'onglet Transcription).</p>
+        <label for="ttsEngine">Moteur</label>
+        <select id="ttsEngine" name="ttsEngine"></select>
+        <div data-engine="gemini">
+          <label for="geminiVoice">Voix Gemini</label>
+          <select id="geminiVoice" name="geminiVoice"></select>
+          <label for="geminiTtsModel">Modèle Gemini (le même pour toute la vidéo ; si son quota est épuisé, le doublage passe sur Piper)</label>
+          <select id="geminiTtsModel" name="geminiTtsModel"></select>
+        </div>
+        <div data-engine="piper">
+          <label for="piperVoice">Voix Piper (français ; les autres langues utilisent une voix par défaut)</label>
+          <select id="piperVoice" name="piperVoice"></select>
+        </div>
+        <div data-engine="browser">
+          <label for="browserVoice">Voix du navigateur</label>
+          <select id="browserVoice" name="browserVoice"></select>
+        </div>
+        <label for="duckVolume">Volume de la vidéo d'origine pendant le doublage : <span id="duckValue"></span></label>
+        <input type="range" id="duckVolume" name="duckVolume" min="0" max="100" step="5" />
+        <label class="inline"><input type="checkbox" name="dubWait" /> Mettre la vidéo en pause si la voix n'est pas encore prête (synchronisation garantie)</label>
+        <label class="inline"><input type="checkbox" name="dubMultiVoice" /> Une voix par intervenant : homme ou femme, identifiés par Gemini (une requête gratuite par vidéo)</label>
+        <div class="actions"><button type="button" id="ttsSample">▶ Écouter un exemple</button></div>
+        <p id="ttsStatus" class="muted"></p>
+
+        <div class="actions">
+          <button type="submit" class="primary">Enregistrer</button>
+          <button type="button" id="test">Tester les clés</button>
+          <button type="button" id="import">Importer un fichier .env</button>
+          <input type="file" id="envFile" accept=".env,text/plain" hidden />
+        </div>
+        <p id="status" class="muted"></p>
+      </form>
+      <ul id="results"></ul>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

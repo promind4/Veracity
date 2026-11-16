@@ -1,0 +1,8 @@
+.env
+*.txt
+!scripts/fixtures/*.txt
+node_modules/
+dist/
+out/
+.claude/
+extension/public/piper/

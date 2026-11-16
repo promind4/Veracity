@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Veracity</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <nav id="tabs" class="tabs"></nav>
+    <div id="meta-bar" class="meta-bar" hidden></div>
+    <main id="content"></main>
+    <form id="composer" class="composer" hidden>
+      <textarea name="question" rows="2" placeholder="Pose une question sur la vidéo… (Entrée pour envoyer)"></textarea>
+      <button type="submit" class="primary">Envoyer</button>
+    </form>
+    <button id="sel-add" hidden>📚 Ajouter au lexique</button>
+    <div id="toast" class="toast" hidden></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
