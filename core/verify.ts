@@ -34,20 +34,20 @@ const hostOf = (url: string) => {
 
 function evidenceLine(e: Evidence): string {
   const head = e.source === 'factcheck' ? `FACT-CHECK ${e.publisher ?? ''}, verdict « ${e.rating ?? '?'} » : ` : '';
-  return `- [${e.id}] ${head}${e.title} (${hostOf(e.url)}${e.date ? `, ${e.date}` : ''}) : ${e.snippet.slice(0, 700)}`;
+  return `- [${e.id}] ${head}${e.title} (${hostOf(e.url)} ; publication indiquée : ${e.date ?? 'inconnue'}${e.retrievedAt ? ` ; consultée le : ${e.retrievedAt}` : ''}) : ${e.snippet.slice(0, e.snippet.includes('Extrait de la page :') ? 3500 : 700)}`;
 }
 
 export function buildVerifyMessages(video: VideoInput, claims: Claim[], evidence: Evidence[], today: string): ChatMessage[] {
   const blocks = claims.map((c) => {
     const items = evidence.filter((e) => e.claimId === c.id);
-    return `### ${c.id} (${c.type}) : « ${c.claim} »
+    return `### ${c.id} (${c.type}${c.timeSensitive ? ', actualité à vérifier' : ''}) : « ${c.claim} »
 Citation : « ${c.quote} »
 Preuves :
 ${items.length ? items.map(evidenceLine).join('\n') : '(aucune preuve trouvée)'}`;
   });
-  const user = `Date du jour : ${today}. Vidéo : « ${video.title} » (${video.author}).
+  const user = `Date du jour : ${today}. Vidéo : « ${video.title} » (${video.author})${video.publishedAt ? `, publiée le ${video.publishedAt}` : ''}.
 
-Juge chaque affirmation UNIQUEMENT à partir des preuves fournies.
+Juge chaque affirmation UNIQUEMENT à partir des preuves fournies. La date de collecte d'une page n'est pas sa date de publication. Une date inconnue ne prouve ni ancienneté ni actualité.
 
 <affirmations_et_preuves>
 ${blocks.join('\n\n')}
