@@ -65,7 +65,9 @@ Règles :
 - N'utilise pas tes connaissances personnelles pour trancher : sans preuve pertinente, le verdict est "inverifiable".
 - La plausibilité ne suffit pas : une affirmation personnelle (revenus, expérience, anecdote de l'auteur) reste "inverifiable" sans preuve directe la concernant.
 - Une source qui émane de l'auteur de la vidéo (son site, ses réseaux) ne prouve pas ses propres affirmations.
-- Un fact-check publié (FACT-CHECK) prime sur les autres sources lorsqu'il porte sur la même affirmation.
+- Un fact-check publié (FACT-CHECK) est prioritaire seulement s'il porte sur la même affirmation, la même version du produit et la bonne période. Un ancien fact-check ne réfute pas une annonce plus récente.
+- Pour une annonce, une sortie de modèle ou une disponibilité qui peut changer rapidement, compare les dates des sources à la date du jour et privilégie une annonce officielle pertinente. L'absence d'un modèle dans tes connaissances ou dans les résultats de recherche ne prouve pas qu'il n'existe pas.
+- Vérifie que la preuve citée confirme précisément l'affirmation ; une source qui parle seulement d'une ancienne version ne suffit pas.
 - Pour une promesse_commerciale, compare-la aux données disponibles (taux de réussite, revenus réels…) ; si rien ne permet de la confirmer ou de la contredire, "inverifiable".
 - "evidence_ids" : les identifiants [E…] qui fondent ton verdict, uniquement parmi ceux listés pour cette affirmation.
 - "correction" : la version exacte de l'affirmation si le verdict est exagere, trompeur ou faux ; sinon null.
