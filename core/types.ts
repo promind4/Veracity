@@ -124,7 +124,7 @@ export interface Report {
   createdAt: string;
   models: string[];
   /** Modèles réellement utilisés à chaque étape, y compris après un repli. */
-  modelsByStage?: { extraction: string; verification: string };
+  modelsByStage?: { extraction: string; verification: string[] };
   summary: string;
   category?: string;
   tags?: string[];
