@@ -69,6 +69,7 @@ export async function gatherEvidence(
   const warnings = new Set<string>();
   const checkable = claims.filter((c) => c.type !== 'opinion');
   let done = 0;
+  let pageReads = 0;
   const perClaim = await mapLimit(checkable, opts.concurrency ?? 3, async (claim) => {
     const found: RawEvidence[] = [];
     // Un premier résultat ancien ne doit pas masquer une annonce récente chez un autre fournisseur.
@@ -95,6 +96,8 @@ export async function gatherEvidence(
     if (claim.timeSensitive) {
       // Lecture bornée à deux pages pour ne pas multiplier les appels ni les délais.
       for (const it of items.filter((item) => item.source !== 'factcheck').slice(0, 2)) {
+        if (pageReads >= 12) break;
+        pageReads++;
         try {
           const page = await readSource(it.url, keys.jinaKey, fetchFn);
           it.snippet = `${it.snippet}\n\nExtrait de la page : ${page.content}`.slice(0, 3500);
