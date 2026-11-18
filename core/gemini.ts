@@ -13,7 +13,7 @@ export const GEMINI_ANALYSIS_MODELS = ['gemini-3-flash-preview', 'gemini-flash-l
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-export type GeminiPart = { text: string } | { fileData: { fileUri: string }; videoMetadata?: { fps: number } };
+export type GeminiPart = { text: string } | { fileData: { fileUri: string }; videoMetadata?: { fps: number } } | { inlineData: { mimeType: string; data: string } };
 
 export interface GeminiOptions {
   /** Une clé, ou plusieurs : la suivante prend le relais quand le quota de la précédente est épuisé. */

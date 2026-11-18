@@ -41,7 +41,7 @@ const ExtractionSchema = z.object({
 
 export function buildExtractionMessages(video: VideoInput, transcript: string, categories: string[] = []): ChatMessage[] {
   const user = `Analyse ${video.platform === 'x' ? 'cette publication X et les sous-titres vidéo disponibles' : 'cette vidéo YouTube'}. Date de l'analyse : ${new Date().toISOString().slice(0, 10)}.
-${video.platform === 'x' ? "Le texte de la publication est fourni dans la description. Il peut contenir des affirmations à vérifier : inclus-les même s'il n'y a pas de paroles vidéo. Les sous-titres éventuels sont fournis séparément. Ne prétends pas avoir vu ou entendu la vidéo si les sous-titres sont absents. Ne qualifie pas une vidéo de générée par IA sans preuve." : ''}
+${video.platform === 'x' ? "Le texte de la publication est fourni dans la description. Il peut contenir des affirmations à vérifier : inclus-les même s'il n'y a pas de paroles vidéo. Les paroles éventuelles sont fournies séparément. Distingue strictement la réalité d'un jeu vidéo, d'une fiction, d'une simulation ou d'un jeu de rôle : si le contexte indique un jeu, dis que la personne joue ou que son personnage agit dans le jeu, sans transformer ces événements en faits réels. Les propos d'un personnage ou une narration à la première personne ne sont pas automatiquement des faits sur l'auteur. Si le contexte ne permet pas d'établir ce qui est montré, ne l'invente pas. Ne prétends pas avoir vu ou entendu la vidéo si les sous-titres sont absents. Ne qualifie pas une vidéo de générée par IA sans preuve." : ''}
 
 <titre>${video.title}</titre>
 <chaine>${video.author}</chaine>

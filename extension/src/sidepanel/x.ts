@@ -1,6 +1,7 @@
 import { analyzeVideo } from '../../../core/pipeline';
 import { type VideoInput } from '../../../core/types';
 import { loadConfig } from '../shared/storage';
+import { startAudioCapture, transcribeXAudio, type AudioCapture } from './x-audio';
 
 type XPost = { id: string; text: string; author: string; lang: string; publishedAt?: string; hasVideo: boolean; duration: number; cues: { start: number; text: string }[] };
 
@@ -52,19 +53,65 @@ export function renderX(root: HTMLElement, tabId: number, id: string): void {
   button.className = 'primary';
   const status = node('p', '');
   const output = document.createElement('div');
-  root.append(button, status, output);
+  const record = node('button', 'Enregistrer l’audio de la vidéo') as HTMLButtonElement;
+  const stop = node('button', 'Arrêter et transcrire') as HTMLButtonElement;
+  stop.hidden = true;
+  const audioStatus = node('p', 'Choisis l’onglet X et active « partager l’audio », puis lance la vidéo depuis son début. Maximum : 3 minutes. Le son capturé sera envoyé à Gemini pour transcription.');
+  let capture: AudioCapture | undefined;
+  let audioTranscript: { language: string; segments: { start: number; text: string }[] } | undefined;
+  let recordedSeconds = 0;
+  let busy = false;
+  root.append(button, record, stop, audioStatus, status, output);
+  record.addEventListener('click', async () => {
+    try {
+      // getDisplayMedia doit être lancé immédiatement après le clic.
+      const pending = startAudioCapture();
+      record.disabled = true;
+      button.disabled = true;
+      capture = await pending;
+      if (!record.isConnected) { await capture.stop(); capture = undefined; return; }
+      stop.hidden = false;
+      audioStatus.textContent = 'Enregistrement en cours. Lance la vidéo, puis clique sur « Arrêter et transcrire ». Le partage s’arrête au bout de 3 minutes.';
+    } catch (e) { record.disabled = false; button.disabled = false; audioStatus.textContent = (e as Error).message; }
+  });
+  const cleanup = new MutationObserver(() => {
+    if (!record.isConnected) {
+      cleanup.disconnect();
+      if (capture) { void capture.stop().catch(() => {}); capture = undefined; }
+    }
+  });
+  cleanup.observe(document.body, { childList: true, subtree: true });
+  stop.addEventListener('click', async () => {
+    if (!capture || busy) return;
+    busy = true;
+    stop.disabled = true;
+    try {
+      const recording = await capture.stop();
+      capture = undefined;
+      audioStatus.textContent = 'Transcription de l’audio par Gemini…';
+      audioTranscript = await transcribeXAudio(recording.audio, recording.duration, await loadConfig());
+      recordedSeconds = recording.duration;
+      audioStatus.textContent = `${audioTranscript.segments.length} passages transcrits. Clique sur « Analyser cette publication ». Vérifie que la vidéo entière a bien été enregistrée.`;
+    } catch (e) { audioStatus.textContent = (e as Error).message; }
+    finally { busy = false; stop.hidden = true; stop.disabled = false; record.disabled = false; button.disabled = false; }
+  });
   button.addEventListener('click', async () => {
     button.disabled = true;
     output.replaceChildren();
     try {
       status.textContent = 'Lecture de la publication…';
       const post = await readXPost(tabId, id);
-      if (!post.text && !post.cues.length) throw new Error('Aucun texte ni sous-titre accessible. La vidéo ne peut pas encore être transcrite automatiquement.');
-      const video: VideoInput = { platform: 'x', videoId: `x-${id}`, title: 'Publication X', author: post.author, description: post.text, durationS: post.duration, publishedAt: post.publishedAt, language: post.lang, segments: post.cues };
+      const cues = audioTranscript?.segments ?? post.cues;
+      if (!post.text && !cues.length) throw new Error('Aucun texte ni sous-titre accessible. Enregistre l’audio de la vidéo pour obtenir une transcription.');
+      const video: VideoInput = { platform: 'x', videoId: `x-${id}`, title: 'Publication X', author: post.author, description: post.text, durationS: post.duration, publishedAt: post.publishedAt, language: audioTranscript?.language ?? post.lang, segments: cues };
       status.textContent = 'Recherche et vérification des affirmations…';
       const report = await analyzeVideo(video, await loadConfig(), (step, detail) => { status.textContent = `Analyse : ${step}${detail ? ` ${detail}` : ''}`; });
       status.textContent = '';
-      output.append(node('h2', 'Portée de l’analyse'), node('p', post.hasVideo ? post.cues.length ? 'Texte de la publication et sous-titres accessibles analysés. Les images et les autres sons de la vidéo ne sont pas vérifiés.' : 'Seul le texte de la publication a été analysé. La vidéo et son audio n’ont pas été analysés.' : 'Texte de la publication analysé.'));
+      output.append(node('h2', 'Portée de l’analyse'), node('p', audioTranscript ? `Texte de la publication et transcription de ${Math.round(recordedSeconds)} secondes de son partagé. Les images ne sont pas analysées ; la transcription peut contenir des erreurs.` : post.hasVideo ? post.cues.length ? 'Texte de la publication et sous-titres accessibles analysés, éventuellement partiels. Les images et les autres sons de la vidéo ne sont pas vérifiés.' : 'Seul le texte de la publication a été analysé. La vidéo et son audio n’ont pas été analysés.' : 'Texte de la publication analysé.'));
+      const sourceDetails = document.createElement('details');
+      sourceDetails.append(node('summary', 'Voir le texte et la transcription utilisés'), node('h3', 'Texte de la publication'), node('p', post.text || 'Aucun texte accessible.'), node('h3', 'Transcription disponible'), node('p', cues.length ? cues.map((cue) => `[${Math.floor(cue.start)} s] ${cue.text}`).join('\n') : 'Aucune transcription récupérée.'));
+      sourceDetails.style.whiteSpace = 'pre-wrap';
+      output.append(sourceDetails);
       if (post.text.length > 5000) output.append(node('p', 'Seuls les 5 000 premiers caractères du texte ont été transmis à l’analyse.'));
       output.append(node('h2', report.scores.label), node('p', `Faits : ${report.scores.facts === null ? 'note indisponible' : `${report.scores.facts} %`} · Discours : ${report.scores.discourse} %`), node('p', report.summary));
       for (const claim of report.claims) {
