@@ -9,7 +9,7 @@ export async function startAudioCapture(): Promise<AudioCapture> {
   const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
   if (!stream.getAudioTracks().length) {
     stream.getTracks().forEach((track) => track.stop());
-    throw new Error('Aucun son partagé. Choisis l’onglet X et active le partage audio.');
+    throw new Error('Aucun son partag�. Choisis l'onglet X et active le partage audio.');
   }
   let recorder: MediaRecorder;
   try { recorder = new MediaRecorder(new MediaStream(stream.getAudioTracks()), { mimeType: 'audio/webm' }); }
@@ -24,7 +24,8 @@ export async function startAudioCapture(): Promise<AudioCapture> {
     recorder.onstop = () => { finished = true; clearTimeout(timeout); stream.getTracks().forEach((track) => track.stop()); resolve({ audio: new Blob(chunks, { type: 'audio/webm' }), duration: (Date.now() - started) / 1000 }); };
   });
   void result.catch(() => {});
-  recorder.start();
+  try { recorder.start(); }
+  catch (error) { stream.getTracks().forEach((track) => track.stop()); throw error; }
   timeout = setTimeout(() => { if (recorder.state !== 'inactive') recorder.stop(); }, 180_000);
   stream.getVideoTracks()[0]?.addEventListener('ended', () => { if (recorder.state !== 'inactive') recorder.stop(); });
   return { stop: async () => {
@@ -35,13 +36,13 @@ export async function startAudioCapture(): Promise<AudioCapture> {
 
 export async function transcribeXAudio(audio: Blob, duration: number, config: Config): Promise<{ language: string; segments: Segment[] }> {
   const keys = geminiKeys(config);
-  if (!keys.length) throw new Error('Ajoute une clé Gemini dans les paramètres pour transcrire l’audio.');
-  if (!audio.size) throw new Error('L’enregistrement est vide.');
+  if (!keys.length) throw new Error('Ajoute une cl� Gemini dans les param�tres pour transcrire l'audio.');
+  if (!audio.size) throw new Error('L'enregistrement est vide.');
   if (audio.size > 12_000_000) throw new Error('Enregistrement trop volumineux ; essaie un extrait plus court.');
   const data = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result).split(',')[1]);
-    reader.onerror = () => reject(new Error('Lecture de l’audio impossible.'));
+    reader.onerror = () => reject(new Error('Lecture de l'audio impossible.'));
     reader.readAsDataURL(audio);
   });
   const { text } = await geminiGenerate([{ inlineData: { mimeType: 'audio/webm', data } }, { text: buildTranscribePrompt(duration) }],

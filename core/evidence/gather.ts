@@ -32,14 +32,14 @@ function buildProviders(keys: SearchKeys, lang: string, fetchFn: FetchFn): Provi
     .flatMap((id) => providers.filter((p) => p.name === names[id]));
 }
 
-/** Premier fournisseur qui renvoie des résultats ; les échecs deviennent des avertissements. */
+/** Premier fournisseur qui renvoie des r�sultats ; les �checs deviennent des avertissements. */
 async function webSearch(q: string, providers: Provider[], warnings: Set<string>, recent = false): Promise<RawEvidence[]> {
   for (const p of providers) {
     try {
       const results = await p.run(q, recent);
       if (results.length) return results;
     } catch (e) {
-      warnings.add(`Recherche ${p.name} en échec : ${(e as Error).message}`);
+      warnings.add(`Recherche ${p.name} en �chec : ${(e as Error).message}`);
     }
   }
   return [];
@@ -47,7 +47,7 @@ async function webSearch(q: string, providers: Provider[], warnings: Set<string>
 
 const urlKey = (url: string) => url.replace(/#.*$/, '').replace(/\/$/, '').toLowerCase();
 
-// Une vidéo ne peut pas servir de preuve pour une autre vidéo (raisonnement circulaire).
+// Une vid�o ne peut pas servir de preuve pour une autre vid�o (raisonnement circulaire).
 const VIDEO_HOSTS = /^https?:\/\/(?:[\w-]+\.)*(?:youtube\.com|youtu\.be|tiktok\.com|dailymotion\.com)\//i;
 
 function dedupe(items: RawEvidence[]): RawEvidence[] {
@@ -76,21 +76,22 @@ export async function gatherEvidence(
   const providers = buildProviders(keys, lang, fetchFn).map((p) => ({
     ...p, run: (q: string, recent?: boolean) => measured(p.name, () => p.run(q, recent)),
   }));
-  if (!providers.length) throw new UserError('config', 'Aucune clé de recherche web configurée (Serper, Jina ou ScraperAPI).');
+  const checkable = claims.filter((c) => c.type !== 'opinion');
+  if (!checkable.length) return { evidence: [], warnings: [], usage };
+  if (!providers.length) throw new UserError('config', 'Aucune cl� de recherche web configur�e (Serper, Jina ou ScraperAPI).');
 
   const warnings = new Set<string>();
-  const checkable = claims.filter((c) => c.type !== 'opinion');
   let done = 0;
   let pageReads = 0;
   const perClaim = await mapLimit(checkable, opts.concurrency ?? 3, async (claim) => {
     const found: RawEvidence[] = [];
-    // Un premier résultat ancien ne doit pas masquer une annonce récente chez un autre fournisseur.
+    // Un premier r�sultat ancien ne doit pas masquer une annonce r�cente chez un autre fournisseur.
     if (claim.timeSensitive && keys.recentSearchMode !== 'fallback') {
       const current = await Promise.all(providers.map(async (p) => {
         try {
           return await p.run(claim.queries[0] ?? claim.claim, true);
         } catch (e) {
-          warnings.add(`Recherche récente ${p.name} en échec : ${(e as Error).message}`);
+          warnings.add(`Recherche r�cente ${p.name} en �chec : ${(e as Error).message}`);
           return [];
         }
       }));
@@ -103,13 +104,13 @@ export async function gatherEvidence(
       try {
         found.push(...(await measured('Google Fact Check', () => factCheckSearch(claim.queries[0], keys.factcheckKey!, lang, fetchFn))));
       } catch (e) {
-        warnings.add(`Google Fact Check en échec : ${(e as Error).message}`);
+        warnings.add(`Google Fact Check en �chec : ${(e as Error).message}`);
       }
     }
     for (const q of claim.queries) found.push(...(await webSearch(q, providers, warnings)));
     const items = dedupe(found).slice(0, MAX_EVIDENCE_PER_CLAIM);
     if (claim.timeSensitive) {
-      // Lecture bornée à deux pages pour ne pas multiplier les appels ni les délais.
+      // Lecture born�e � deux pages pour ne pas multiplier les appels ni les d�lais.
       for (const it of items.filter((item) => item.source !== 'factcheck').slice(0, 2)) {
         if (pageReads >= 12) break;
         pageReads++;
@@ -118,7 +119,7 @@ export async function gatherEvidence(
           it.snippet = `${it.snippet}\n\nExtrait de la page : ${page.content}`.slice(0, 3500);
           it.date = page.date ?? it.date;
         } catch {
-          warnings.add('Lecture complète de certaines sources récentes impossible ; seuls leurs extraits sont disponibles.');
+          warnings.add('Lecture compl�te de certaines sources r�centes impossible ; seuls leurs extraits sont disponibles.');
         }
       }
     }

@@ -12,20 +12,20 @@ function article(id: string, content: string) {
   return a;
 }
 
-describe('lecture d’une publication X depuis le fil', () => {
-  it('sélectionne exactement la bonne publication parmi plusieurs', async () => {
-    const posts = [article('1234', 'Autre publication'), article('123', 'Texte demandé')];
+describe('lecture d'une publication X depuis le fil', () => {
+  it('s�lectionne exactement la bonne publication parmi plusieurs', async () => {
+    const posts = [article('1234', 'Autre publication'), article('123', 'Texte demand�')];
     vi.stubGlobal('location', { hostname: 'x.com', pathname: '/home' });
     vi.stubGlobal('document', { querySelectorAll: () => posts });
-    vi.stubGlobal('chrome', { scripting: { executeScript: async (params: { func: (id: string) => unknown; args: string[] }) => [{ result: params.func(...params.args as [string]) }] } });
+    vi.stubGlobal('chrome', { scripting: { executeScript: async (params: { func: (id: string) => unknown; args: string[] }) => [{ result: await params.func(...params.args as [string]) }] } });
     const result = await readXPost(1, '123');
-    expect(result.text).toBe('Texte demandé');
+    expect(result.text).toBe('Texte demand�');
     expect(result.hasVideo).toBe(false);
   });
   it('refuse un identifiant absent du fil', async () => {
     vi.stubGlobal('location', { hostname: 'x.com', pathname: '/home' });
     vi.stubGlobal('document', { querySelectorAll: () => [article('1234', 'Autre')] });
-    vi.stubGlobal('chrome', { scripting: { executeScript: async (params: { func: (id: string) => unknown; args: string[] }) => [{ result: params.func(...params.args as [string]) }] } });
+    vi.stubGlobal('chrome', { scripting: { executeScript: async (params: { func: (id: string) => unknown; args: string[] }) => [{ result: await params.func(...params.args as [string]) }] } });
     await expect(readXPost(1, '123')).rejects.toThrow('Publication non visible');
   });
 });
