@@ -40,7 +40,8 @@ const ExtractionSchema = z.object({
 });
 
 export function buildExtractionMessages(video: VideoInput, transcript: string, categories: string[] = []): ChatMessage[] {
-  const user = `Analyse cette vidéo YouTube. Date de l'analyse : ${new Date().toISOString().slice(0, 10)}.
+  const user = `Analyse ${video.platform === 'x' ? 'cette publication X et les sous-titres vidéo disponibles' : 'cette vidéo YouTube'}. Date de l'analyse : ${new Date().toISOString().slice(0, 10)}.
+${video.platform === 'x' ? "Le texte de la publication est fourni dans la description. Il peut contenir des affirmations à vérifier : inclus-les même s'il n'y a pas de paroles vidéo. Les sous-titres éventuels sont fournis séparément. Ne prétends pas avoir vu ou entendu la vidéo si les sous-titres sont absents. Ne qualifie pas une vidéo de générée par IA sans preuve." : ''}
 
 <titre>${video.title}</titre>
 <chaine>${video.author}</chaine>
@@ -56,7 +57,7 @@ Tâches :
 1. "summary" : résumé neutre de la vidéo en 3 à 5 phrases.
 2. "claims" : au maximum ${MAX_CLAIMS} affirmations, les plus importantes pour juger la fiabilité de la vidéo. Priorité aux affirmations précises et vérifiables : chiffres, dates, statistiques, études citées, lois, faits historiques ou scientifiques, résultats promis.
    - "t" : horodatage en secondes où l'affirmation est prononcée (d'après les repères [m:ss]).
-   - "quote" : citation exacte et courte de la transcription.
+   - "quote" : citation exacte et courte ${video.platform === 'x' ? 'du texte de la publication ou des sous-titres fournis' : 'de la transcription'}.
    - "claim" : reformulation autonome et précise (qui, quoi, quand), compréhensible sans la vidéo, fidèle à ce qui est dit : n'ajoute ni hypothèse ni précision de ton cru (pas de « probablement », pas de nom ou de date que la personne n'a pas donnés). Une prédiction ou une spéculation est une "opinion", pas un "fait".
    - "type" : "fait" (vérifiable objectivement), "promesse_commerciale" (gains, résultats, offres, garanties) ou "opinion" (jugement subjectif).
    - "importance" : 1 (détail ou contexte), 2 (notable) ou 3 (central : la thèse de la vidéo ou un argument qui la soutient). Un fait de contexte (date d'un livre cité, biographie, historique) vaut 1, même s'il est souvent répété.

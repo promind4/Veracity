@@ -31,6 +31,7 @@ export interface Segment {
 }
 
 export interface VideoInput {
+  platform?: 'youtube' | 'x';
   videoId: string;
   title: string;
   author: string;

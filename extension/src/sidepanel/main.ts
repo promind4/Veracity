@@ -39,6 +39,7 @@ import { changeCategory, grantedCategories, rebuildKbIndex, restoreFromKb, saveT
 import { createChannels } from './channels';
 import type { HistoryView } from './channelView';
 import { createLexicon } from './lexicon';
+import { renderX } from './x';
 import {
   type TranscriptItem,
   type TranscriptMode,
@@ -73,6 +74,7 @@ const analyses = new Map<string, AnalysisState>();
 const streaming = new Map<string, string>();
 const videoLoads = new Map<string, Promise<VideoInput>>();
 let current: { tabId: number; videoId: string | null; channelUrl: string | null } = { tabId: -1, videoId: null, channelUrl: null };
+let currentX: { tabId: number; id: string } | null = null;
 let tab: Tab = 'report';
 let renderToken = 0;
 let editingCategory = false;
@@ -279,6 +281,14 @@ async function renderHistoryTab(stale: () => boolean): Promise<void> {
 
 async function render(): Promise<void> {
   const token = ++renderToken;
+  if (currentX) {
+    tabsEl.hidden = true;
+    metaBar.hidden = true;
+    composer.hidden = true;
+    renderX(content, currentX.tabId, currentX.id);
+    return;
+  }
+  tabsEl.hidden = false;
   const stale = () => token !== renderToken;
   const videoId = current.videoId;
   renderTabs(tabsEl, tab, videoId !== null);
@@ -686,6 +696,9 @@ async function refresh(): Promise<void> {
   const seq = ++refreshSeq;
   const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (seq !== refreshSeq) return;
+  const xMatch = activeTab?.url?.match(/^https:\/\/(?:x\.com|twitter\.com)\/[^/?#]+\/status\/(\d+)(?:[/?#]|$)/i);
+  currentX = xMatch && activeTab?.id !== undefined ? { tabId: activeTab.id, id: xMatch[1] } : null;
+  if (currentX) { current = { tabId: currentX.tabId, videoId: null, channelUrl: null }; await render(); return; }
   const videoId = activeTab?.url ? parseVideoId(activeTab.url) : null;
   const tabId = activeTab?.id ?? -1;
   if (tabId !== current.tabId) {
