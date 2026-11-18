@@ -7,13 +7,13 @@ type XPost = { id: string; text: string; author: string; lang: string; published
 /** Lit uniquement la publication ouverte et ses pistes de sous-titres accessibles au navigateur. */
 export async function readXPost(tabId: number, id: string): Promise<XPost> {
   const [out] = await chrome.scripting.executeScript({ target: { tabId }, args: [id], func: (expectedId: string) => {
-    if (!/^(x\.com|twitter\.com)$/.test(location.hostname) || !new RegExp(`/status/${expectedId}(?:/|$)`).test(location.pathname)) throw new Error('Ouvre la publication X sur sa page dédiée.');
+    if (!/^(x\.com|twitter\.com)$/.test(location.hostname) || !/^\d+$/.test(expectedId)) throw new Error('Publication X non valide.');
     const articles = Array.from(document.querySelectorAll('article'));
     const article = articles.find((a) => Array.from(a.querySelectorAll('a[href]')).some((link) => {
       const href = link.getAttribute('href') ?? '';
-      return link.closest('article') === a && href.includes(`/status/${expectedId}`) && !!link.querySelector('time');
+      return link.closest('article') === a && new RegExp(`/status/${expectedId}(?:[/?#]|$)`).test(href) && !!link.querySelector('time');
     }));
-    if (!article) throw new Error('Publication introuvable. Attends son chargement puis réessaie.');
+    if (!article) throw new Error('Publication non visible. Reviens à cette publication dans le fil puis réessaie.');
     const textElement = Array.from(article.querySelectorAll('[data-testid="tweetText"]')).find((el) => el.closest('article') === article);
     const text = (textElement as HTMLElement | undefined)?.innerText?.trim() ?? '';
     const author = article.querySelector('[data-testid="User-Name"]')?.textContent?.trim() ?? '';
@@ -42,6 +42,12 @@ const node = (tag: string, text: string) => { const e = document.createElement(t
 
 export function renderX(root: HTMLElement, tabId: number, id: string): void {
   root.replaceChildren(node('h1', 'Vérifier une publication X'), node('p', 'Veracity examine le texte de la publication et les sous-titres accessibles de sa vidéo.'));
+  root.append(node('p', 'Prototype X : le rapport est disponible ici. Les onglets Discussion, Transcription et Lexique restent disponibles sur YouTube.'));
+  const postLink = node('a', 'Ouvrir la publication sélectionnée') as HTMLAnchorElement;
+  postLink.href = `https://x.com/i/status/${encodeURIComponent(id)}`;
+  postLink.target = '_blank';
+  postLink.rel = 'noopener noreferrer';
+  root.append(postLink);
   const button = node('button', 'Analyser cette publication') as HTMLButtonElement;
   button.className = 'primary';
   const status = node('p', '');

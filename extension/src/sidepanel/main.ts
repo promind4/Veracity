@@ -75,6 +75,8 @@ const streaming = new Map<string, string>();
 const videoLoads = new Map<string, Promise<VideoInput>>();
 let current: { tabId: number; videoId: string | null; channelUrl: string | null } = { tabId: -1, videoId: null, channelUrl: null };
 let currentX: { tabId: number; id: string } | null = null;
+let xFeed = false;
+const selectedX = new Map<number, string>();
 let tab: Tab = 'report';
 let renderToken = 0;
 let editingCategory = false;
@@ -286,6 +288,13 @@ async function render(): Promise<void> {
     metaBar.hidden = true;
     composer.hidden = true;
     renderX(content, currentX.tabId, currentX.id);
+    return;
+  }
+  if (xFeed) {
+    tabsEl.hidden = true;
+    metaBar.hidden = true;
+    composer.hidden = true;
+    renderNotice(content, 'Vérifier une publication X', 'Sur le fil X, clique sur « Vérifier avec Veracity » sous la publication souhaitée.');
     return;
   }
   tabsEl.hidden = false;
@@ -697,8 +706,16 @@ async function refresh(): Promise<void> {
   const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (seq !== refreshSeq) return;
   const xMatch = activeTab?.url?.match(/^https:\/\/(?:x\.com|twitter\.com)\/[^/?#]+\/status\/(\d+)(?:[/?#]|$)/i);
-  currentX = xMatch && activeTab?.id !== undefined ? { tabId: activeTab.id, id: xMatch[1] } : null;
-  if (currentX) { current = { tabId: currentX.tabId, videoId: null, channelUrl: null }; await render(); return; }
+  xFeed = !!activeTab?.url && /^https:\/\/(?:x\.com|twitter\.com)(?:[/?#]|$)/i.test(activeTab.url);
+  const { pendingX } = await chrome.storage.session.get('pendingX') as { pendingX?: { tabId: number; windowId: number; id: string } };
+  if (seq !== refreshSeq) return;
+  if (xFeed && pendingX && pendingX.tabId === activeTab?.id && pendingX.windowId === await panelWindowId) {
+    selectedX.set(pendingX.tabId, pendingX.id);
+    await chrome.storage.session.remove('pendingX');
+  }
+  const xId = activeTab?.id !== undefined ? selectedX.get(activeTab.id) ?? xMatch?.[1] : undefined;
+  currentX = xFeed && xId && activeTab?.id !== undefined ? { tabId: activeTab.id, id: xId } : null;
+  if (xFeed) { current = { tabId: activeTab?.id ?? -1, videoId: null, channelUrl: null }; await render(); return; }
   const videoId = activeTab?.url ? parseVideoId(activeTab.url) : null;
   const tabId = activeTab?.id ?? -1;
   if (tabId !== current.tabId) {
@@ -737,6 +754,20 @@ async function refresh(): Promise<void> {
 }
 
 chrome.runtime.onMessage.addListener((msg) => {
+  if (msg?.type === 'select-x' && /^\d+$/.test(msg.id)) {
+    void (async () => {
+      if (msg.windowId !== await panelWindowId) return;
+      const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (active?.id !== msg.tabId || !active.url || !/^https:\/\/(?:x\.com|twitter\.com)(?:[/?#]|$)/i.test(active.url)) return;
+      selectedX.set(msg.tabId, msg.id);
+      currentX = { tabId: msg.tabId, id: msg.id };
+      xFeed = true;
+      current = { tabId: msg.tabId, videoId: null, channelUrl: null };
+      await chrome.storage.session.remove('pendingX');
+      await render();
+    })();
+    return;
+  }
   if (msg?.type !== 'start-analysis') return;
   void (async () => {
     // Le message est diffusé à tous les panneaux : seul celui de la fenêtre de la vidéo s'en occupe.
@@ -756,6 +787,7 @@ chrome.tabs.onActivated.addListener(({ windowId }) => {
   });
 });
 chrome.tabs.onUpdated.addListener((tabId, info) => {
+  if (info.url) selectedX.delete(tabId);
   if (tabId === current.tabId && info.url) void refresh();
 });
 chrome.tabs.onRemoved.addListener((tabId) => viewByTab.delete(tabId));

@@ -42,6 +42,11 @@
         "src/content/main.ts"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://x.com/*", "https://twitter.com/*"],
+      "js": ["src/content/x.ts"],
+      "run_at": "document_idle"
     }
   ],
   "side_panel": {

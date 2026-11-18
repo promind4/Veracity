@@ -14,7 +14,21 @@ async function getItem<T>(key: string): Promise<T | null> {
 }
 
 export async function loadConfig(): Promise<Config> {
-  const config = await getItem<Partial<Config>>('config');
+  let config = await getItem<Partial<Config>>('config');
+  // Le fichier local facultatif n'est jamais inclus dans le dépôt ou les builds de publication.
+  const marker = await getItem<boolean>('localDefaultsImported');
+  if (!marker) {
+    try {
+      const response = await fetch(chrome.runtime.getURL('local-defaults.json'));
+      if (response.ok) {
+        const defaults = await response.json() as Partial<Config>;
+        const merged: Partial<Config> = { ...defaults };
+        for (const [key, value] of Object.entries(config ?? {})) if (value !== undefined && value !== '') (merged as Record<string, unknown>)[key] = value;
+        config = merged;
+        await chrome.storage.local.set({ config, localDefaultsImported: true });
+      }
+    } catch { /* build sans configuration locale */ }
+  }
   return { openrouterKey: '', models: DEFAULT_MODELS, ...(config ?? {}) };
 }
 
