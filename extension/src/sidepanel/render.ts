@@ -105,11 +105,14 @@ export function renderReport(root: HTMLElement, r: Report): void {
     <header class="summary-card ${scoreClass(r.scores.facts)}">
       <h1>${esc(r.scores.label)}</h1>
       <p class="muted">${esc(r.title)} — ${esc(r.author)}</p>
-      ${gauge('Exactitude des faits', r.scores.facts, `${Math.round(r.scores.coverage * 100)} % des affirmations vérifiables ont pu être vérifiées`)}
+      <div class="scores-grid">
+        ${gauge('Exactitude des faits', r.scores.facts, `${Math.round(r.scores.coverage * 100)} % des affirmations vérifiables ont pu être vérifiées`)}
+        ${gauge('Honnêteté du discours', r.scores.discourse, `${r.rhetoric.length} procédé(s) de persuasion détecté(s)`)}
+      </div>
       ${reliabilityLine(r.scores)}
-      ${gauge('Honnêteté du discours', r.scores.discourse, `${r.rhetoric.length} procédé(s) de persuasion détecté(s)`)}
+      ${r.modelsByStage ? `<details><summary>Services utilisés</summary><p>Extraction : ${esc(r.modelsByStage.extraction)}<br>Vérification : ${esc(r.modelsByStage.verification.join(', '))}</p>${r.searchUsage ? `<ul>${Object.entries(r.searchUsage).map(([name, stats]) => `<li>${esc(name)} : ${stats.requests} appel(s), ${stats.failed} échec(s)</li>`).join('')}</ul><small class="muted">Appels de recherche et de lecture, sans estimation de facturation.</small>` : ''}</details>` : ''}
       <div class="actions"><button data-action="reanalyze">Ré-analyser</button><button data-action="export-report">Exporter (.md)</button><button data-action="open-channels" title="Note la chaîne sur un échantillon de ses vidéos">📺 Chaîne</button><button data-action="options">Options</button></div>
-      <small class="muted">${new Date(r.createdAt).toLocaleString('fr-FR')} · ${r.modelsByStage ? `Extraction : ${esc(r.modelsByStage.extraction)} · Vérification : ${esc(r.modelsByStage.verification.join(', ') || 'aucun passage')}` : esc(r.models.join(', '))}</small>
+      <small class="muted">${new Date(r.createdAt).toLocaleString('fr-FR')} · ${esc(r.models.join(', '))}</small>
     </header>
     ${r.warnings.length ? `<div class="warnings">${r.warnings.map((w) => `<p>⚠️ ${esc(w)}</p>`).join('')}</div>` : ''}
     <section><h2>Résumé</h2><p>${esc(r.summary)}</p></section>
@@ -134,7 +137,7 @@ export function renderIdle(root: HTMLElement, message?: string): void {
     ? `<div class="idle"><h1>Veracity</h1><p class="muted">${esc(message)}</p></div>`
     : `<div class="idle"><h1>Veracity</h1><p>Vérifie les affirmations de cette vidéo et la façon dont elles sont présentées.</p>
        <button class="primary" data-action="analyze">Analyser cette vidéo</button>
-       <p><button data-action="open-channels">📺 Évaluer la chaîne</button></p>
+       <p><button data-action="open-channels">📺 Évaluer toute la chaîne</button></p>
        <p class="muted">Tu peux aussi discuter de la vidéo ou lire sa transcription sans lancer la vérification.</p></div>`;
 }
 
@@ -297,7 +300,7 @@ export function renderMetaBar(root: HTMLElement, s: MetaBarState): void {
       : s.access === 'prompt'
         ? `<button data-action="kb-authorize">🔒 Autoriser ${esc(s.rootName ?? 'le dossier')}</button>`
         : '<button data-action="kb-save-all" title="Enregistrer rapport, discussion et transcription dans la base">💾 Enregistrer</button>';
-  root.innerHTML = `<div class="meta-label">${label}</div><div class="meta-actions"><button data-action="edit-category">Modifier</button>${access}</div>`;
+  root.innerHTML = `<div class="meta-label">${label}</div><div class="meta-actions"><button data-action="edit-category">Modifier</button><button data-action="kb-pick" title="Choisir où enregistrer rapports, discussions et transcriptions">Choisir le dossier</button>${access}</div>`;
 }
 
 const ONLY_OPTIONS: [string, string][] = [

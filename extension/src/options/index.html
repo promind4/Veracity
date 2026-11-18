@@ -5,7 +5,7 @@
     <title>Veracity — options</title>
     <link rel="stylesheet" href="../sidepanel/style.css" />
     <style>
-      main { max-width: 640px; margin: 0 auto; }
+      main { width: min(100%, 760px); margin: 0 auto; padding: 36px 24px 64px; }
       label { display: block; margin: 12px 0 4px; font-weight: 600; }
       input[type='password'], input[type='text'], textarea { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); font: inherit; }
       textarea { min-height: 80px; font-family: ui-monospace, monospace; font-size: 12px; }
@@ -13,36 +13,76 @@
       h2 { margin-top: 24px; }
       #userProfile { font-family: inherit; font-size: 14px; min-height: 100px; }
       label.inline { display: flex; gap: 8px; align-items: center; font-weight: normal; }
+      .options-intro { margin-bottom: 28px; }
+      .options-intro h1 { margin: 8px 0; }
+      .options-eyebrow { color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: .12em; }
+      form { padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+      form h2 { padding-top: 24px; margin-top: 28px; border-top: 1px solid var(--border); }
+      form h2:first-child { padding-top: 0; margin-top: 0; border-top: 0; }
+      form select { min-height: 40px; max-width: 100%; }
+      input[type='checkbox'], input[type='range'] { accent-color: var(--accent); }
+      #results { padding-left: 20px; }
+      @media (max-width: 480px) { main { padding: 24px 14px 48px; } form { padding: 16px; } }
     </style>
   </head>
   <body>
     <main>
-      <h1>Veracity — options</h1>
-      <p class="muted">Les clés restent dans ce navigateur (stockage local de l'extension).</p>
+      <div class="options-intro">
+        <span class="options-eyebrow">VERACITY</span>
+        <h1>Paramètres</h1>
+        <p class="muted">Configure les services, ton profil et tes préférences. Les clés sont enregistrées localement dans ce navigateur.</p>
+      </div>
       <form>
-        <label for="openrouterKey">Clé OpenRouter (secours quand Gemini est saturé ; modèles gratuits, 50 requêtes par jour)</label>
+        <h2>Analyse et modèles</h2>
+        <p class="muted">Une clé donne accès à un fournisseur ; les modèles sont choisis séparément. Gratuité, quotas et facturation dépendent du modèle et du compte. Veracity utilise l’ordre choisi, sans classement automatique de qualité.</p>
+        <label for="analysisOrder">Priorité pour l’analyse des vidéos et le classement</label>
+        <select id="analysisOrder" name="analysisOrder"><option value="gemini-first">Gemini, OpenRouter, OpenAI, Anthropic</option><option value="openrouter-first">OpenRouter, Gemini, OpenAI, Anthropic</option><option value="openai-first">OpenAI, Gemini, OpenRouter, Anthropic</option><option value="anthropic-first">Anthropic, Gemini, OpenRouter, OpenAI</option></select>
+        <label for="openaiKey">Clé API OpenAI directe</label>
+        <input id="openaiKey" name="openaiKey" type="password" autocomplete="off" />
+        <label for="openaiModel">Identifiant du modèle OpenAI</label>
+        <input id="openaiModel" name="openaiModel" type="text" placeholder="Identifiant API du modèle" />
+        <label for="anthropicKey">Clé API Anthropic directe</label>
+        <input id="anthropicKey" name="anthropicKey" type="password" autocomplete="off" />
+        <label for="anthropicModel">Identifiant du modèle Anthropic</label>
+        <input id="anthropicModel" name="anthropicModel" type="text" placeholder="Identifiant API du modèle" />
+        <p class="muted">Ces clés et modèles servent à l’analyse. Chaque fournisseur applique ses propres tarifs et quotas. Un abonnement ChatGPT ou Claude ne constitue pas une clé API.</p>
+        <p class="muted">Seuls les fournisseurs configurés sont appelés. Les modèles sont essayés dans l’ordre de leurs listes ; un échec déclenche le repli. Discussion, lexique et traduction utilisent encore leurs moteurs dédiés. Transcription audio et voix Gemini nécessitent une clé Gemini.</p>
+        <label for="openrouterKey">Clé OpenRouter</label>
+        <p class="muted">OpenRouter donne accès aux modèles de plusieurs éditeurs, dont NVIDIA et certains modèles Grok. Utilise leurs identifiants OpenRouter ci-dessous. Les clés directes OpenAI et Anthropic se saisissent dans leurs champs dédiés ; les clés xAI et NVIDIA directes ne sont pas encore prises en charge.</p>
         <input id="openrouterKey" name="openrouterKey" type="password" autocomplete="off" />
-        <label for="serperKey">Clé Serper (recherche principale)</label>
+        <h2>Recherche et sources</h2>
+        <p class="muted">Recherche habituelle : Serper, puis Jina, puis ScraperAPI parmi les services activés et configurés. Le premier qui renvoie des résultats arrête la cascade. Google Fact Check est un complément indépendant. Lire une page avec Jina Reader est distinct de chercher avec Jina.</p>
+        <label class="inline"><input type="checkbox" name="enable-serper" /> Activer Serper</label>
+        <label class="inline"><input type="checkbox" name="enable-jina" /> Activer Jina Search</label>
+        <label class="inline"><input type="checkbox" name="enable-scraperapi" /> Activer ScraperAPI (facultatif)</label>
+        <label for="recentSearchMode">Recherche d’annonces récentes</label>
+        <select id="recentSearchMode" name="recentSearchMode"><option value="parallel">Croiser les services activés (plus d’appels)</option><option value="fallback">Cascade uniquement (économie de crédits, couverture potentiellement réduite)</option></select>
+        <p class="muted">Le rapport compte les appels réellement effectués. Ce nombre n’est pas un coût : crédits et tarifs varient selon le service. Les anciens rapports ne contiennent pas ce suivi.</p>
+        <label for="serperKey">Clé Serper</label>
         <input id="serperKey" name="serperKey" type="password" autocomplete="off" />
-        <label for="jinaKey">Clé Jina (recherche de secours)</label>
+        <label for="jinaKey">Clé Jina (Search et lecture de pages Reader)</label>
         <input id="jinaKey" name="jinaKey" type="password" autocomplete="off" />
         <label for="factcheckKey">Clé Google Fact Check (fact-checks existants)</label>
         <input id="factcheckKey" name="factcheckKey" type="password" autocomplete="off" />
-        <label for="scraperapiKey">Clé ScraperAPI (dernier recours)</label>
+        <label for="scraperapiKey">Clé ScraperAPI (recherche facultative)</label>
         <input id="scraperapiKey" name="scraperapiKey" type="password" autocomplete="off" />
-        <label for="geminiKey">Clé Gemini (moteur principal : analyse, discussion, lexique, transcription audio, traduction, doublage ; gratuite sur aistudio.google.com)</label>
+        <h2>Accès Gemini et listes de modèles</h2>
+        <label for="geminiKey">Clé Gemini (Google AI Studio ; quotas et facturation selon le compte)</label>
         <input id="geminiKey" name="geminiKey" type="password" autocomplete="off" />
         <label for="geminiKey2">Clé Gemini de secours (relais automatique quand le quota de la première est épuisé ; idéalement créée dans un autre projet Google)</label>
         <input id="geminiKey2" name="geminiKey2" type="password" autocomplete="off" />
         <label for="models">Modèles OpenRouter, par ordre de préférence (un par ligne)</label>
         <textarea id="models" name="models"></textarea>
+        <label for="geminiModels">Modèles Gemini pour l’analyse (un par ligne, dans l’ordre)</label>
+        <textarea id="geminiModels" name="geminiModels" placeholder="Laisser vide pour les modèles par défaut"></textarea>
+        <p class="muted">Le premier modèle disponible est utilisé ; les suivants prennent le relais en cas d’échec. Le rapport indique le modèle réellement utilisé. Un modèle récent ne garantit pas, à lui seul, de meilleurs verdicts. Les sources web restent nécessaires pour l’actualité.</p>
 
         <h2>Mon profil</h2>
         <p class="muted">Sert à adapter le Lexique et le tuteur à ton niveau (ex. « débutant en code, à l'aise en commerce, curieux de domotique »). Ce texte est envoyé aux modèles d'IA : n'y mets ni nom, ni adresse, ni donnée personnelle.</p>
         <textarea id="userProfile" name="userProfile" maxlength="1500" placeholder="Domaines que tu maîtrises, ce que tu découvres, ton niveau…"></textarea>
 
         <h2>Base de connaissances</h2>
-        <p class="muted">Rapports, discussions et transcriptions sont rangés par catégorie dans ce dossier (par exemple <code>D:\BDD YOUTUBE</code>). Chrome demande une autorisation : choisis « Toujours autoriser ».</p>
+        <p class="muted">Choisis ton dossier pour les rapports, discussions et transcriptions. Le navigateur demandera l’accès. Changer de dossier ne déplace pas les anciens documents.</p>
         <p id="kbStatus">Aucun dossier choisi.</p>
         <div class="actions"><button type="button" id="pickKb">Choisir le dossier de la base…</button></div>
         <label class="inline"><input type="checkbox" name="autoSave" /> Enregistrer automatiquement les rapports et les discussions</label>
@@ -52,32 +92,36 @@
         <label for="ttsEngine">Moteur</label>
         <select id="ttsEngine" name="ttsEngine"></select>
         <div data-engine="gemini">
+          <p class="muted">Si le service vocal Gemini échoue, le doublage peut passer à Piper et télécharger sa voix au premier usage. Choisis les voix de l’appareil pour éviter ce téléchargement de modèle Piper.</p>
           <label for="geminiVoice">Voix Gemini</label>
           <select id="geminiVoice" name="geminiVoice"></select>
           <label for="geminiTtsModel">Modèle Gemini (le même pour toute la vidéo ; si son quota est épuisé, le doublage passe sur Piper)</label>
           <select id="geminiTtsModel" name="geminiTtsModel"></select>
         </div>
         <div data-engine="piper">
+          <p class="muted">Piper fonctionne dans le navigateur : aucune application à installer. La voix est téléchargée au premier usage ; la taille varie selon la voix. Son cache peut être supprimé par le navigateur et nécessiter un nouveau téléchargement.</p>
           <label for="piperVoice">Voix Piper (français ; les autres langues utilisent une voix par défaut)</label>
           <select id="piperVoice" name="piperVoice"></select>
         </div>
         <div data-engine="browser">
+          <p class="muted">Les voix disponibles dépendent du navigateur et du système (Windows, macOS, Linux…). Certaines voix peuvent nécessiter une connexion. « Écouter un exemple » permet de vérifier celles disponibles sur cet appareil.</p>
           <label for="browserVoice">Voix du navigateur</label>
           <select id="browserVoice" name="browserVoice"></select>
         </div>
         <label for="duckVolume">Volume de la vidéo d'origine pendant le doublage : <span id="duckValue"></span></label>
         <input type="range" id="duckVolume" name="duckVolume" min="0" max="100" step="5" />
-        <label class="inline"><input type="checkbox" name="dubWait" /> Mettre la vidéo en pause si la voix n'est pas encore prête (synchronisation garantie)</label>
-        <label class="inline"><input type="checkbox" name="dubMultiVoice" /> Une voix par intervenant : homme ou femme, identifiés par Gemini (une requête gratuite par vidéo)</label>
+        <label class="inline"><input type="checkbox" name="dubWait" /> Mettre la vidéo en pause si la voix n'est pas encore prête</label>
+        <label class="inline"><input type="checkbox" name="dubMultiVoice" /> Distinguer les intervenants avec Gemini (requête supplémentaire, selon les quotas du compte)</label>
         <div class="actions"><button type="button" id="ttsSample">▶ Écouter un exemple</button></div>
         <p id="ttsStatus" class="muted"></p>
 
         <div class="actions">
           <button type="submit" class="primary">Enregistrer</button>
-          <button type="button" id="test">Tester les clés</button>
+          <button type="button" id="test">Tester les services activés</button>
           <button type="button" id="import">Importer un fichier .env</button>
           <input type="file" id="envFile" accept=".env,text/plain" hidden />
         </div>
+        <p class="muted">Ce test vérifie les accès et peut consommer des requêtes de recherche. Il ne compare pas la qualité des modèles ni ne valide chaque modèle configuré.</p>
         <p id="status" class="muted"></p>
       </form>
       <ul id="results"></ul>

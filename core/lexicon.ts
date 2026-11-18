@@ -1,6 +1,7 @@
 // Lexique d'apprentissage : termes rencontrés dans les vidéos, définis une fois, gardés pour toutes les vidéos.
 
 import { z } from 'zod';
+import { topicKey } from './topics';
 import type { ChatTurn } from './chat';
 import { frontMatter, videoUrl } from './export';
 import { GEMINI_ANALYSIS_MODELS, geminiGenerate, geminiKeys } from './gemini';
@@ -119,6 +120,8 @@ const FIELD_RULES = `- "term" : le terme tel qu'on le chercherait (« MQTT », �
 - "definition" : 1 à 3 phrases simples et exactes. Si tu emploies un autre terme technique, explique-le entre parenthèses. Si tu n'es pas sûr, dis-le plutôt que d'inventer.
 - "example" : un exemple concret ou une analogie courte.
 - "domain" : le domaine DU TERME LUI-MÊME, pas celui de la vidéo (« STEM » relève de l'éducation, même dans une vidéo sur l'IA). Un nom court (« Programmation », « Domotique », « Finance »…). Reprends exactement un domaine existant s'il convient ; n'en crée un nouveau que si aucun ne convient.
+- N'invente pas de domaines vagues : « Informatique créative » ne doit pas remplacer « Programmation », « Intelligence artificielle » ou « Infographie 3D ». Choisis la spécialité du concept, pas celle d'un produit mentionné dans la vidéo. Un algorithme général relève de l'informatique ; un réseau neuronal de l'intelligence artificielle ; le rendu 3D de l'infographie 3D.
+- Évite les variantes synonymes d'un domaine existant et les doublons entre sigle et nom développé ; renseigne « full » pour expliciter les sigles. Deux concepts liés ne sont pas forcément synonymes.
 - "related" : jusqu'à 3 termes liés.`;
 
 export function buildExtractPrompt(video: VideoInput, lexicon: Lexicon, profile?: string): string {
@@ -234,7 +237,12 @@ export function mergeTerms(
   let linked = 0;
   for (const raw of items) {
     const item = { ...raw, domain: canonicalDomain(next, raw.domain) };
-    const id = termKey(item.term);
+    // Réutiliser une définition développée uniquement si le domaine correspond et
+    // si le rapprochement est unique. Les concepts simplement voisins restent distincts.
+    const names = [termKey(item.term), termKey(item.full)].filter(Boolean);
+    const matches = Object.values(next).filter((t) => topicKey(t.domain) === topicKey(item.domain)
+      && [termKey(t.term), termKey(t.full)].filter(Boolean).some((key) => names.includes(key)));
+    const id = next[termKey(item.term)] ? termKey(item.term) : matches.length === 1 ? matches[0].id : termKey(item.term);
     if (!id) continue;
     const link: TermVideo[] = video ? [{ videoId: video.videoId, title: video.title, why: item.why, t: item.t }] : [];
     const existing = next[id];
@@ -285,7 +293,8 @@ export function canonicalDomain(lexicon: Lexicon, domain: string): string {
   const wanted = domain.trim().replace(/\s+/g, ' ');
   const key = domainKey(wanted);
   if (!key) return '';
-  return Object.values(lexicon).find((t) => domainKey(t.domain) === key)?.domain ?? wanted;
+  return Object.values(lexicon).find((t) => domainKey(t.domain) === key)?.domain
+    ?? Object.values(lexicon).find((t) => topicKey(t.domain) === topicKey(wanted))?.domain ?? wanted;
 }
 
 /** Range un terme dans un autre domaine (choisi par l'utilisateur). */

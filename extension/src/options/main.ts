@@ -7,7 +7,7 @@ import { getKbRoot, kbAccess, setKbRoot } from '../shared/kb';
 import { loadConfig, saveConfig } from '../shared/storage';
 import { PiperClient } from '../shared/tts/piper';
 
-const KEY_FIELDS = ['openrouterKey', 'serperKey', 'jinaKey', 'factcheckKey', 'scraperapiKey', 'geminiKey', 'geminiKey2'] as const;
+const KEY_FIELDS = ['openrouterKey', 'serperKey', 'jinaKey', 'factcheckKey', 'scraperapiKey', 'geminiKey', 'geminiKey2', 'openaiKey', 'anthropicKey'] as const;
 type KeyField = (typeof KEY_FIELDS)[number];
 const ENV_NAMES: Record<string, KeyField> = {
   OPENROUTER_API_KEY: 'openrouterKey',
@@ -54,8 +54,16 @@ select('ttsEngine').addEventListener('change', showEngine);
 function readForm(): Config {
   const models = field('models').value.split('\n').map((s) => s.trim()).filter(Boolean);
   const config: Config = {
+    analysisProviderOrder: ({ 'gemini-first': ['gemini', 'openrouter', 'openai', 'anthropic'], 'openrouter-first': ['openrouter', 'gemini', 'openai', 'anthropic'], 'openai-first': ['openai', 'gemini', 'openrouter', 'anthropic'], 'anthropic-first': ['anthropic', 'gemini', 'openrouter', 'openai'] } as const)[select('analysisOrder').value as 'gemini-first' | 'openrouter-first' | 'openai-first' | 'anthropic-first'],
+    openaiKey: field('openaiKey').value.trim() || undefined,
+    anthropicKey: field('anthropicKey').value.trim() || undefined,
+    openaiModel: field('openaiModel').value.trim() || undefined,
+    anthropicModel: field('anthropicModel').value.trim() || undefined,
+    searchProviderOrder: (['serper', 'jina', 'scraperapi'] as const).filter((id) => (field(`enable-${id}`) as HTMLInputElement).checked),
+    recentSearchMode: select('recentSearchMode').value as 'parallel' | 'fallback',
     openrouterKey: field('openrouterKey').value.trim(),
     models: models.length ? models : DEFAULT_MODELS,
+    geminiModels: field('geminiModels').value.split('\n').map((s) => s.trim()).filter(Boolean),
     autoSave: (field('autoSave') as HTMLInputElement).checked,
     ttsEngine: select('ttsEngine').value as TtsEngine,
     geminiVoice: select('geminiVoice').value,
@@ -73,8 +81,14 @@ function readForm(): Config {
 }
 
 function fillForm(config: Config) {
+  select('analysisOrder').value = `${config.analysisProviderOrder?.[0] ?? 'gemini'}-first`;
+  field('openaiModel').value = config.openaiModel ?? '';
+  field('anthropicModel').value = config.anthropicModel ?? '';
+  select('recentSearchMode').value = config.recentSearchMode ?? 'parallel';
+  for (const id of ['serper', 'jina', 'scraperapi'] as const) (field(`enable-${id}`) as HTMLInputElement).checked = (config.searchProviderOrder ?? ['serper', 'jina', 'scraperapi']).includes(id);
   for (const name of KEY_FIELDS) field(name).value = config[name] ?? '';
   field('models').value = config.models.join('\n');
+  field('geminiModels').value = (config.geminiModels ?? []).join('\n');
   (field('autoSave') as HTMLInputElement).checked = config.autoSave !== false;
   select('ttsEngine').value = config.ttsEngine ?? 'gemini';
   select('geminiVoice').value = config.geminiVoice ?? 'Kore';
@@ -138,7 +152,12 @@ document.getElementById('ttsSample')!.addEventListener('click', async () => {
 
 document.getElementById('test')!.addEventListener('click', async () => {
   status.textContent = 'Test en cours…';
-  const results = await testKeys(readForm());
+  const c = readForm();
+  const results = await testKeys({ ...c,
+    serperKey: c.searchProviderOrder?.includes('serper') ? c.serperKey : undefined,
+    jinaKey: c.searchProviderOrder?.includes('jina') ? c.jinaKey : undefined,
+    scraperapiKey: c.searchProviderOrder?.includes('scraperapi') ? c.scraperapiKey : undefined,
+  });
   const list = document.getElementById('results')!;
   list.replaceChildren(
     ...Object.entries(results).map(([name, r]) => {

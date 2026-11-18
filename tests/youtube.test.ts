@@ -65,6 +65,25 @@ describe('groupSegments', () => {
 });
 
 describe('fetchVideo', () => {
+  it('préfère le groupe audio par défaut à un doublage allemand placé en premier', async () => {
+    const fetchFn = vi.fn(async (input: string | URL | Request) => {
+      if (String(input).includes('/player')) return new Response(JSON.stringify({
+        videoDetails: {},
+        captions: { playerCaptionsTracklistRenderer: {
+          captionTracks: [
+            { baseUrl: 'https://yt/caps?lang=de', languageCode: 'de', kind: 'asr' },
+            { baseUrl: 'https://yt/caps?lang=en&tlang=de', languageCode: 'en', kind: 'asr' },
+          ],
+          defaultAudioTrackIndex: 1,
+          audioTracks: [{ captionTrackIndices: [0] }, { captionTrackIndices: [1], defaultCaptionTrackIndex: 1 }],
+        } },
+      }));
+      return new Response(JSON.stringify({ events: [{ tStartMs: 0, segs: [{ utf8: 'Original English' }] }] }));
+    });
+    const video = await fetchVideo('abcdefghijk', fetchFn as typeof fetch);
+    expect(video.language).toBe('en');
+    expect(String(fetchFn.mock.calls[1][0])).toBe('https://yt/caps?lang=en&fmt=json3');
+  });
   const player = {
     playabilityStatus: { status: 'OK' },
     videoDetails: { title: 'Titre', author: 'Chaîne', shortDescription: 'Desc', lengthSeconds: '120' },

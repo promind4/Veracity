@@ -125,6 +125,7 @@ export interface Report {
   models: string[];
   /** Modèles réellement utilisés à chaque étape, y compris après un repli. */
   modelsByStage?: { extraction: string; verification: string[] };
+  searchUsage?: Record<string, { requests: number; failed: number }>;
   summary: string;
   category?: string;
   tags?: string[];
@@ -137,6 +138,16 @@ export interface Report {
 }
 
 export interface Config {
+  /** Priorité pour l'analyse JSON ; les autres fonctions conservent leurs moteurs dédiés. */
+  analysisProviderOrder?: readonly ('gemini' | 'openrouter' | 'openai' | 'anthropic')[];
+  openaiKey?: string;
+  anthropicKey?: string;
+  openaiModel?: string;
+  anthropicModel?: string;
+  searchProviderOrder?: ('serper' | 'jina' | 'scraperapi')[];
+  recentSearchMode?: 'parallel' | 'fallback';
+  /** Modèles Gemini pour l'analyse, par ordre de préférence. */
+  geminiModels?: string[];
   openrouterKey: string;
   serperKey?: string;
   jinaKey?: string;

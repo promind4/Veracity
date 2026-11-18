@@ -3,9 +3,9 @@
 export type TtsEngine = 'gemini' | 'piper' | 'browser';
 
 export const TTS_ENGINES: Record<TtsEngine, string> = {
-  gemini: 'Gemini (voix naturelles, quota gratuit limité)',
-  piper: 'Piper (local, illimité, modèle de 60 Mo à télécharger une fois)',
-  browser: 'Navigateur (instantané, voix de Windows/Chrome)',
+  gemini: 'Gemini (clé API, quotas selon le compte)',
+  piper: 'Piper (calcul local, téléchargement de la voix au premier usage)',
+  browser: 'Voix disponibles sur cet appareil',
 };
 
 /** Voix Piper par langue cible (identifiants du dépôt rhasspy/piper-voices). */

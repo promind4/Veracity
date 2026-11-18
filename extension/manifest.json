@@ -18,6 +18,8 @@
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://openrouter.ai/*",
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*",
     "https://google.serper.dev/*",
     "https://s.jina.ai/*",
     "https://r.jina.ai/*",

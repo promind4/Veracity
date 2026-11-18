@@ -52,6 +52,14 @@ describe('parseTerms', () => {
 });
 
 describe('mergeTerms', () => {
+  it('réutilise un nom développé dans le même domaine et conserve les acquis', () => {
+    const first = setStatus(mergeTerms({}, [item('LLM', { full: 'Large language model', domain: 'Intelligence artificielle' })], video, NOW).lexicon, 'llm', 'known', NOW);
+    const result = mergeTerms(first, [item('Large language model', { domain: 'IA' })], { videoId: 'other', title: 'Autre' }, NOW);
+    expect(result.added).toBe(0);
+    expect(result.lexicon.llm.status).toBe('known');
+    expect(result.lexicon.llm.videos).toHaveLength(2);
+    expect(Object.keys(result.lexicon)).toHaveLength(1);
+  });
   it('crée les termes, avec la vidéo et le statut « new »', () => {
     const { lexicon, added } = mergeTerms({}, [item('MQTT')], video, NOW);
     expect(added).toBe(1);

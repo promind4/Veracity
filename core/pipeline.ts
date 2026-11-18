@@ -27,7 +27,7 @@ export async function analyzeVideo(
 
   const checkableCount = extraction.claims.filter((c) => c.type !== 'opinion').length;
   onProgress('search', `0/${checkableCount}`);
-  const { evidence, warnings: searchWarnings } = await gatherEvidence(extraction.claims, config, video.language, {
+  const { evidence, warnings: searchWarnings, usage: searchUsage } = await gatherEvidence(extraction.claims, config, video.language, {
     fetchFn,
     onClaimDone: (done, total) => onProgress('search', `${done}/${total}`),
   });
@@ -49,6 +49,7 @@ export async function analyzeVideo(
     createdAt: new Date().toISOString(),
     models: [...new Set([extractModel, ...verifyModels].filter(Boolean))],
     modelsByStage: { extraction: extractModel, verification: verifyModels },
+    searchUsage,
     summary: extraction.summary,
     category: extraction.category || undefined,
     tags: extraction.tags,

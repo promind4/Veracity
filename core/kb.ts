@@ -1,4 +1,5 @@
 // Nommage des dossiers et fichiers de la base de connaissances (compatible Windows).
+import { topicKey } from './topics';
 
 export const KB_FILES = { report: 'rapport.md', chat: 'discussion.md', transcript: 'transcription.md', translation: 'traduction.md' } as const;
 export type KbKind = keyof typeof KB_FILES;
@@ -32,7 +33,8 @@ const comparable = (s: string) =>
 export function normalizeCategory(name: string, existing: string[]): string {
   const clean = sanitizeName(name, 60);
   if (!comparable(clean)) return 'Non classé';
-  const match = existing.find((e) => comparable(e) === comparable(clean));
+  const match = existing.find((e) => comparable(e) === comparable(clean))
+    ?? existing.find((e) => topicKey(e) === topicKey(clean));
   return match ?? clean.charAt(0).toUpperCase() + clean.slice(1);
 }
 

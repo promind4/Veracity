@@ -1,6 +1,7 @@
 // Moteurs d'analyse « JSON » interchangeables : Gemini (puissant, quota large) d'abord, OpenRouter en secours.
 
 import type { z } from 'zod';
+import { directEngine } from './direct';
 import { GEMINI_ANALYSIS_MODELS, geminiGenerate, geminiKeys } from './gemini';
 import { type ChatMessage, chatJson, chatStream, type LlmOptions } from './llm';
 import { extractJson } from './schema';
@@ -62,23 +63,31 @@ export const geminiEngine =
   };
 
 /** Moteur de l'analyse : Gemini si une clé existe (repli sur OpenRouter en cas d'échec), sinon OpenRouter. */
-export function analysisEngine(config: Pick<Config, 'geminiKey' | 'geminiKey2' | 'openrouterKey' | 'models'>, fetchFn?: FetchFn): JsonEngine {
+export function analysisEngine(config: Pick<Config, 'geminiKey' | 'geminiKey2' | 'openrouterKey' | 'models' | 'geminiModels' | 'analysisProviderOrder' | 'openaiKey' | 'anthropicKey' | 'openaiModel' | 'anthropicModel'>, fetchFn?: FetchFn): JsonEngine {
   const openrouter = config.openrouterKey
     ? openrouterEngine({ key: config.openrouterKey, models: config.models.length ? config.models : DEFAULT_MODELS, fetchFn })
     : null;
-  if (!config.geminiKey && !openrouter) {
+  const gemini = geminiKeys(config).length
+    ? geminiEngine({ key: geminiKeys(config), fetchFn, models: config.geminiModels?.length ? config.geminiModels : undefined }) : null;
+  const openai = config.openaiKey && config.openaiModel ? directEngine('openai', config.openaiKey, config.openaiModel, fetchFn) : null;
+  const anthropic = config.anthropicKey && config.anthropicModel ? directEngine('anthropic', config.anthropicKey, config.anthropicModel, fetchFn) : null;
+  const engines = { gemini, openrouter, openai, anthropic };
+  const ordered = [...new Set<keyof typeof engines>(config.analysisProviderOrder ?? ['gemini', 'openrouter'])]
+    .map((name) => engines[name]).filter((engine): engine is JsonEngine => Boolean(engine));
+  if (!ordered.length) {
     throw new UserError('config', 'Aucune clé pour l’analyse : ajoute une clé Gemini (gratuite) ou OpenRouter dans les options.');
   }
-  if (!config.geminiKey) return openrouter!;
-  const gemini = geminiEngine({ key: geminiKeys(config), fetchFn });
-  if (!openrouter) return gemini;
   return async (messages, schema, callOpts) => {
-    try {
-      return await gemini(messages, schema, callOpts);
-    } catch (e) {
-      if (e instanceof UserError && (e.code === 'llm' || e.code === 'config')) return openrouter(messages, schema);
-      throw e;
+    let last: unknown;
+    for (const engine of ordered) {
+      try {
+        return await engine(messages, schema, callOpts);
+      } catch (e) {
+        if (!(e instanceof UserError && ['llm', 'config', 'quota', 'unavailable'].includes(e.code))) throw e;
+        last = e;
+      }
     }
+    throw last;
   };
 }
 

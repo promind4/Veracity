@@ -88,7 +88,10 @@ const NO_CAPTIONS_HINT = 'Ajoute une clé Gemini (gratuite) dans les options pou
 
 async function captionSegments(track: CaptionTrack | undefined, fetchFn: FetchFn): Promise<Segment[]> {
   if (!track) return [];
-  const res = await fetchFn(track.baseUrl.replace(/&fmt=[^&]*/, '') + '&fmt=json3');
+  const url = new URL(track.baseUrl);
+  url.searchParams.delete('tlang');
+  url.searchParams.set('fmt', 'json3');
+  const res = await fetchFn(url.toString());
   const body = res.ok ? await res.text() : '';
   return body ? parseJson3(JSON.parse(body)) : [];
 }
@@ -125,8 +128,15 @@ export async function fetchVideo(videoId: string, fetchFn: FetchFn = fetch, hl =
       : {}),
   };
 
-  const tracks: CaptionTrack[] = player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
-  const track = chooseTrack(tracks);
+  const captions = player.captions?.playerCaptionsTracklistRenderer;
+  const tracks: CaptionTrack[] = captions?.captionTracks ?? [];
+  // Les pistes automatiques peuvent comprendre plusieurs doublages. Le groupe audio
+  // par défaut et sa piste de sous-titres donnent une priorité plus fiable que leur ordre.
+  const audio = captions?.audioTracks?.[captions?.defaultAudioTrackIndex ?? 0];
+  const originalTracks: CaptionTrack[] = (audio?.captionTrackIndices ?? [])
+    .map((i: number) => tracks[i]).filter(Boolean);
+  const defaultTrack = tracks[audio?.defaultCaptionTrackIndex];
+  const track = defaultTrack ?? chooseTrack(originalTracks.length ? originalTracks : tracks);
   const segments = await captionSegments(track, fetchFn);
   if (track && segments.length) return { ...base, language: baseLang(track.languageCode), segments, transcriptSource: 'captions' };
 

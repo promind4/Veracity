@@ -19,9 +19,12 @@ export async function categorizeVideo(video: VideoInput, existing: string[], eng
 <description>
 ${video.description.slice(0, 1500)}
 </description>
-<debut_transcription>
-${formatTranscript(video.segments, 8000).text}
-</debut_transcription>
+<extraits_transcription>
+${[0, 0.5, 0.9].map((fraction) => {
+  const start = Math.floor(video.segments.length * fraction);
+  return formatTranscript(video.segments.slice(start), 2600).text;
+}).filter((text, index, all) => text && all.indexOf(text) === index).join('\n[…]\n')}
+</extraits_transcription>
 
 ${categoryInstructions(existing)}
 

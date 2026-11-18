@@ -15,6 +15,11 @@ describe('sanitizeName', () => {
 });
 
 describe('normalizeCategory', () => {
+  it('rapproche les synonymes explicites sans confondre les spécialités', () => {
+    expect(normalizeCategory('IA', ['Intelligence artificielle'])).toBe('Intelligence artificielle');
+    expect(normalizeCategory('Machine learning', ['Apprentissage automatique'])).toBe('Apprentissage automatique');
+    expect(normalizeCategory('Infographie 3D', ['Informatique'])).toBe('Infographie 3D');
+  });
   const existing = ['Agents IA', 'E-commerce & Dropshipping'];
   it('réutilise une catégorie existante malgré casse et accents', () => {
     expect(normalizeCategory('agents ia', existing)).toBe('Agents IA');

@@ -13,7 +13,7 @@ import { type Config, type ProgressStep, type VideoInput } from '../../../core/t
 import { transcribeYouTube } from '../../../core/transcribe';
 import { TARGET_LANGUAGES, translateCues, type Translation, translationEngine } from '../../../core/translate';
 import { fetchVideo, groupSegments, parseVideoId, type TranscriptFallback } from '../../../core/youtube';
-import { getKbRoot, kbAccess, listCategories, requestKbAccess } from '../shared/kb';
+import { getKbRoot, setKbRoot, kbAccess, listCategories, requestKbAccess } from '../shared/kb';
 import { makePageFetch, seekInTab } from '../shared/pageFetch';
 import {
   getCachedReport,
@@ -532,6 +532,16 @@ async function handleAction(el: HTMLElement): Promise<void> {
     }
     case 'kb-save-all':
       return saveOrDownload(tabId, videoId, ['report', 'chat'], true);
+    case 'kb-pick': {
+      try {
+        const root = await window.showDirectoryPicker({ id: 'veracity-kb', mode: 'readwrite' });
+        await setKbRoot(root);
+        toast(`Dossier d’enregistrement : ${root.name}`);
+      } catch (e) {
+        if ((e as Error).name !== 'AbortError') toast(`Choix du dossier impossible : ${(e as Error).message}`);
+      }
+      return drawMetaBar();
+    }
     case 'kb-authorize': {
       const root = await getKbRoot();
       if (root && (await requestKbAccess(root))) toast(`🔓 Accès à ${root.name} autorisé`);
