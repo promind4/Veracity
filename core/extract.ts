@@ -22,6 +22,7 @@ const ExtractionSchema = z.object({
         claim: z.string().min(3),
         type: enumOf(CLAIM_TYPES, 'fait'),
         importance: z.coerce.number().int().min(1).max(3).catch(2),
+        time_sensitive: z.boolean().optional().default(false),
         queries: z.array(z.string()).default([]),
       }),
     )
@@ -39,10 +40,11 @@ const ExtractionSchema = z.object({
 });
 
 export function buildExtractionMessages(video: VideoInput, transcript: string, categories: string[] = []): ChatMessage[] {
-  const user = `Analyse cette vidéo YouTube.
+  const user = `Analyse cette vidéo YouTube. Date de l'analyse : ${new Date().toISOString().slice(0, 10)}.
 
 <titre>${video.title}</titre>
 <chaine>${video.author}</chaine>
+${video.publishedAt ? `<date_publication>${video.publishedAt}</date_publication>` : ''}
 <description>
 ${video.description.slice(0, 5000)}
 </description>
@@ -59,18 +61,19 @@ Tâches :
    - "type" : "fait" (vérifiable objectivement), "promesse_commerciale" (gains, résultats, offres, garanties) ou "opinion" (jugement subjectif).
    - "importance" : 1 (détail ou contexte), 2 (notable) ou 3 (central : la thèse de la vidéo ou un argument qui la soutient). Un fait de contexte (date d'un livre cité, biographie, historique) vaut 1, même s'il est souvent répété.
    - Si la vidéo défend une thèse factuelle (« la Terre est plate », « ce traitement guérit X », « cette crypto va faire x100 »), inclus cette thèse elle-même comme affirmation d'importance 3.
-   - "queries" : 1 ou 2 requêtes Google courtes, dans la langue la plus pertinente pour trouver des sources fiables.
+   - "time_sensitive" : true si la vérité de l’affirmation peut changer rapidement (annonce de sortie, lancement, disponibilité, version, prix, loi récente, événement en cours), false pour un fait historique ou stable. Cela déclenche une recherche web renforcée.
+   - "queries" : 1 ou 2 requêtes Google courtes, dans la langue la plus pertinente pour trouver des sources fiables. Pour une annonce récente (modèle, produit, étude, réglementation), inclure le nom exact et, si pertinent, son éditeur ou son organisme afin de retrouver l'annonce officielle.
    - N'extrais pas les modalités d'une offre (prix, réduction, places restantes, date limite) : elles relèvent de "rhetoric", pas de "claims".
    - Préfère les affirmations sur le monde (chiffres, lois, études, événements) aux détails de la vie privée de l'auteur, sauf s'ils servent d'argument central (revenus mis en avant pour vendre, par exemple).
 3. "rhetoric" : les procédés de persuasion ou de manipulation présents. "technique" parmi :
-   urgence (délai artificiel), rarete (stock ou places limitées), generalisation (« tout le monde », « 95 % des gens » sans source), temoignage_inverifiable (succès personnel ou d'élèves invérifiable), promesse_resultat (gain, réussite ou résultat personnel garanti au spectateur ; un appel à l'action collective ou d'intérêt général n'en est pas), autorite_douteuse (expert, étude ou institution citée VAGUEMENT : « des scientifiques disent », « une étude montre » sans la nommer ; un expert nommé avec sa fonction ou son institution n'en est pas un), conflit_interet (l'auteur vend ou touche une commission sur ce que la vidéo recommande : formation, produit, plateforme via lien affilié ou code promo, sponsor non signalé ; un livre ou une cagnotte sans rapport avec le sujet, ou un sponsor annoncé clairement, n'en sont pas), certitude_abusive (prédiction ou spéculation présentée comme certaine ou facile, risques minimisés ou passés sous silence), autre (autre manipulation caractérisée : appel à la peur, faux dilemme, récit complotiste… ; une accroche humoristique ou une mise en scène pédagogique n'en est pas).
+   urgence (délai artificiel), rarete (stock ou places limitées), generalisation (« tout le monde », « 95 % des gens » sans source), temoignage_inverifiable (succès personnel ou d'élèves invérifiable), promesse_resultat (gain, réussite ou résultat personnel garanti au spectateur ; un appel à l'action collective ou d'intérêt général n'en est pas), autorite_douteuse (expert, étude ou institution citée VAGUEMENT : « des scientifiques disent », « une étude montre » sans la nommer ; un expert nommé avec sa fonction ou son institution n'en est pas un), conflit_interet (l'auteur vend ou touche une commission sur ce que la vidéo recommande sans le signaler clairement : formation, produit, plateforme via lien affilié ou code promo, sponsor non signalé ; un partenariat ou un sponsor explicitement annoncé n'en est pas un), certitude_abusive (prédiction ou spéculation présentée comme certaine ou facile, risques minimisés ou passés sous silence ; annoncer la sortie d'un produit ou d'un modèle n'en est pas un), autre (autre manipulation caractérisée : appel à la peur, faux dilemme, récit complotiste… ; une accroche humoristique ou une mise en scène pédagogique n'en est pas).
    Pour chacun : "t", "quote", "explanation" (une phrase).
-   Ne signale un procédé que s'il sert clairement à persuader ou à vendre. Une anecdote neutre, une présentation de son parcours ou un avertissement honnête (« ce sera difficile ») n'en sont pas. En cas de doute, ne le signale pas.
+   Ne signale un procédé que s'il sert clairement à persuader ou à vendre. Une anecdote neutre, une présentation de son parcours ou un avertissement honnête (« ce sera difficile ») n'en sont pas. Une appréciation positive (« vaut le détour », « plus réaliste ») ne constitue pas une garantie de résultat.\n   Ne déduis jamais qu'un modèle, produit ou événement récent n'existe pas à partir de tes connaissances internes ou de l'absence de source dans cette étape. Classe l'annonce en affirmation à vérifier par la recherche web, pas en procédé de persuasion. En cas de doute sur un procédé, ne le signale pas.
 4. Classement :
 ${categoryInstructions(categories)}
 
 Réponds UNIQUEMENT avec ce JSON :
-{"summary":"...","category":"...","tags":["..."],"claims":[{"t":0,"quote":"...","claim":"...","type":"fait","importance":2,"queries":["..."]}],"rhetoric":[{"t":0,"technique":"urgence","quote":"...","explanation":"..."}]}`;
+{"summary":"...","category":"...","tags":["..."],"claims":[{"t":0,"quote":"...","claim":"...","type":"fait","importance":2,"time_sensitive":false,"queries":["..."]}],"rhetoric":[{"t":0,"technique":"urgence","quote":"...","explanation":"..."}]}`;
   return [
     { role: 'system', content: SYSTEM_PROMPT },
     { role: 'user', content: user },
@@ -93,6 +96,7 @@ export async function extractClaims(
       claim: c.claim,
       type: c.type,
       importance: c.importance,
+      ...(c.time_sensitive ? { timeSensitive: true } : {}),
       queries: queries.length ? queries : [c.claim],
     };
   });

@@ -120,6 +120,9 @@ export async function fetchVideo(videoId: string, fetchFn: FetchFn = fetch, hl =
     channelId: typeof d.channelId === 'string' ? d.channelId : undefined,
     description: d.shortDescription ?? '',
     durationS: Number(d.lengthSeconds ?? 0),
+    ...(typeof player.microformat?.playerMicroformatRenderer?.publishDate === 'string'
+      ? { publishedAt: player.microformat.playerMicroformatRenderer.publishDate as string }
+      : {}),
   };
 
   const tracks: CaptionTrack[] = player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];

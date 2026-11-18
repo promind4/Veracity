@@ -38,6 +38,7 @@ export interface VideoInput {
   channelId?: string;
   description: string;
   durationS: number;
+  publishedAt?: string;
   language: string;
   segments: Segment[];
   /** Origine de la transcription : sous-titres YouTube ou transcription audio par Gemini. */
@@ -52,6 +53,8 @@ export interface Claim {
   type: ClaimType;
   importance: number;
   queries: string[];
+  /** Affirmation concernant une annonce ou une information susceptible d'avoir changé récemment. */
+  timeSensitive?: boolean;
 }
 
 export interface RhetoricItem {
@@ -76,6 +79,8 @@ export interface RawEvidence {
   title: string;
   snippet: string;
   date?: string;
+  /** Horodatage de la collecte ; distinct de la date de publication. */
+  retrievedAt?: string;
   source: EvidenceSource;
   rating?: string;
   publisher?: string;
@@ -118,6 +123,8 @@ export interface Report {
   author: string;
   createdAt: string;
   models: string[];
+  /** Modèles réellement utilisés à chaque étape, y compris après un repli. */
+  modelsByStage?: { extraction: string; verification: string[] };
   summary: string;
   category?: string;
   tags?: string[];

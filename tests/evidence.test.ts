@@ -53,6 +53,43 @@ describe('gatherEvidence', () => {
     expect(evidence.map((e) => e.url)).toEqual(['https://insee.fr/a']);
   });
 
+  it('pour une annonce récente, interroge plusieurs fournisseurs, lit les pages et garde les dates distinctes', async () => {
+    const fetchFn = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes('google.serper.dev')) {
+        const body = JSON.parse(String(init?.body));
+        return new Response(JSON.stringify({ organic: [body.tbs
+          ? { link: 'https://éditeur.example/annonce', title: 'Annonce', snippet: 'Nouveau modèle', date: '2026-11-16' }
+          : { link: 'https://old.example/v1', title: 'Ancien', snippet: 'Ancien modèle', date: '2024-01-01' }] }));
+      }
+      if (url.includes('s.jina.ai')) return new Response(JSON.stringify({ data: [{ url: 'https://autre.example/news', title: 'Autre', description: 'Confirmation' }] }));
+      if (url.includes('r.jina.ai')) return new Response(JSON.stringify({ data: { content: 'Texte complet de la page', publishedTime: '2026-11-16' } }));
+      throw new Error('URL inattendue ' + url);
+    });
+    const recent = { ...claim('C1', 'fait', ['Nouveau modèle éditeur']), timeSensitive: true };
+    const { evidence } = await gatherEvidence([recent], { serperKey: 's', jinaKey: 'j' }, 'fr', { fetchFn: fetchFn as typeof fetch });
+    const searches = fetchFn.mock.calls.filter(([url]) => String(url).includes('google.serper.dev'));
+    expect(searches.some(([, init]) => JSON.parse(String(init?.body)).tbs === 'qdr:w')).toBe(true);
+    expect(evidence.map((e) => e.url)).toEqual(['https://éditeur.example/annonce', 'https://autre.example/news', 'https://old.example/v1']);
+    expect(evidence[0].snippet).toContain('Texte complet de la page');
+    expect(evidence[0].date).toBe('2026-11-16');
+    expect(evidence[0].retrievedAt).toEqual(expect.any(String));
+  });
+
+  it('conserve les résultats si la lecture de la page récente échoue', async () => {
+    const fetchFn = vi.fn(async (input: string | URL | Request) => {
+      if (String(input).includes('r.jina.ai')) return new Response('indisponible', { status: 503 });
+      return new Response(JSON.stringify({ organic: [{ link: 'https://source.example/annonce', title: 'Annonce', snippet: 'Modèle disponible' }] }));
+    });
+    const { evidence, warnings } = await gatherEvidence(
+      [{ ...claim('C1', 'fait', ['nouveau modèle']), timeSensitive: true }],
+      { serperKey: 's' }, 'fr', { fetchFn: fetchFn as typeof fetch },
+    );
+    expect(evidence).toHaveLength(1);
+    expect(evidence[0].snippet).toBe('Modèle disponible');
+    expect(warnings).toContain('Lecture complète de certaines sources récentes impossible ; seuls leurs extraits sont disponibles.');
+  });
+
   it('exige au moins une clé de recherche', async () => {
     await expect(gatherEvidence([claim('C1', 'fait', ['q'])], {}, 'fr')).rejects.toMatchObject({ code: 'config' });
   });

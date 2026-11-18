@@ -36,7 +36,7 @@ export async function analyzeVideo(
   onProgress('verify');
   // Deux passages indépendants quand Gemini est disponible : leur accord mesure la solidité de la note (3 requêtes au total).
   const passes = opts.passes ?? (config.geminiKey ? 2 : 1);
-  const { verdicts, model: verifyModel, passes: passVerdicts, failedPasses } = await verifyClaims(video, extraction.claims, evidence, engine, { passes });
+  const { verdicts, models: verifyModels, passes: passVerdicts, failedPasses } = await verifyClaims(video, extraction.claims, evidence, engine, { passes });
   if (failedPasses) warnings.push('Un des passages de vérification a échoué : la fiabilité de la note est moins bien mesurée.');
 
   const scores = computeScores(extraction.claims, verdicts, extraction.rhetoric, passVerdicts);
@@ -47,7 +47,8 @@ export async function analyzeVideo(
     title: video.title,
     author: video.author,
     createdAt: new Date().toISOString(),
-    models: [...new Set([extractModel, verifyModel].filter(Boolean))],
+    models: [...new Set([extractModel, ...verifyModels].filter(Boolean))],
+    modelsByStage: { extraction: extractModel, verification: verifyModels },
     summary: extraction.summary,
     category: extraction.category || undefined,
     tags: extraction.tags,

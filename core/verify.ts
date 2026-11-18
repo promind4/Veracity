@@ -34,20 +34,20 @@ const hostOf = (url: string) => {
 
 function evidenceLine(e: Evidence): string {
   const head = e.source === 'factcheck' ? `FACT-CHECK ${e.publisher ?? ''}, verdict « ${e.rating ?? '?'} » : ` : '';
-  return `- [${e.id}] ${head}${e.title} (${hostOf(e.url)}${e.date ? `, ${e.date}` : ''}) : ${e.snippet.slice(0, 700)}`;
+  return `- [${e.id}] ${head}${e.title} (${hostOf(e.url)} ; publication indiquée : ${e.date ?? 'inconnue'}${e.retrievedAt ? ` ; consultée le : ${e.retrievedAt}` : ''}) : ${e.snippet.slice(0, e.snippet.includes('Extrait de la page :') ? 3500 : 700)}`;
 }
 
 export function buildVerifyMessages(video: VideoInput, claims: Claim[], evidence: Evidence[], today: string): ChatMessage[] {
   const blocks = claims.map((c) => {
     const items = evidence.filter((e) => e.claimId === c.id);
-    return `### ${c.id} (${c.type}) : « ${c.claim} »
+    return `### ${c.id} (${c.type}${c.timeSensitive ? ', actualité à vérifier' : ''}) : « ${c.claim} »
 Citation : « ${c.quote} »
 Preuves :
 ${items.length ? items.map(evidenceLine).join('\n') : '(aucune preuve trouvée)'}`;
   });
-  const user = `Date du jour : ${today}. Vidéo : « ${video.title} » (${video.author}).
+  const user = `Date du jour : ${today}. Vidéo : « ${video.title} » (${video.author})${video.publishedAt ? `, publiée le ${video.publishedAt}` : ''}.
 
-Juge chaque affirmation UNIQUEMENT à partir des preuves fournies.
+Juge chaque affirmation UNIQUEMENT à partir des preuves fournies. La date de collecte d'une page n'est pas sa date de publication. Une date inconnue ne prouve ni ancienneté ni actualité.
 
 <affirmations_et_preuves>
 ${blocks.join('\n\n')}
@@ -65,7 +65,9 @@ Règles :
 - N'utilise pas tes connaissances personnelles pour trancher : sans preuve pertinente, le verdict est "inverifiable".
 - La plausibilité ne suffit pas : une affirmation personnelle (revenus, expérience, anecdote de l'auteur) reste "inverifiable" sans preuve directe la concernant.
 - Une source qui émane de l'auteur de la vidéo (son site, ses réseaux) ne prouve pas ses propres affirmations.
-- Un fact-check publié (FACT-CHECK) prime sur les autres sources lorsqu'il porte sur la même affirmation.
+- Un fact-check publié (FACT-CHECK) est prioritaire seulement s'il porte sur la même affirmation, la même version du produit et la bonne période. Un ancien fact-check ne réfute pas une annonce plus récente.
+- Pour une annonce, une sortie de modèle ou une disponibilité qui peut changer rapidement, compare les dates des sources à la date du jour et privilégie une annonce officielle pertinente. L'absence d'un modèle dans tes connaissances ou dans les résultats de recherche ne prouve pas qu'il n'existe pas.
+- Vérifie que la preuve citée confirme précisément l'affirmation ; une source qui parle seulement d'une ancienne version ne suffit pas.
 - Pour une promesse_commerciale, compare-la aux données disponibles (taux de réussite, revenus réels…) ; si rien ne permet de la confirmer ou de la contredire, "inverifiable".
 - "evidence_ids" : les identifiants [E…] qui fondent ton verdict, uniquement parmi ceux listés pour cette affirmation.
 - "correction" : la version exacte de l'affirmation si le verdict est exagere, trompeur ou faux ; sinon null.
@@ -140,6 +142,7 @@ export function combineVerdicts(passes: ClaimVerdict[][], claims: Claim[]): Clai
 export interface VerifyResult {
   verdicts: ClaimVerdict[];
   model: string;
+  models: string[];
   /** Verdicts de chaque passage réussi, pour mesurer l'écart entre eux. */
   passes: ClaimVerdict[][];
   failedPasses: number;
@@ -160,7 +163,7 @@ export async function verifyClaims(
   opts: VerifyOptions = {},
 ): Promise<VerifyResult> {
   const checkable = claims.filter((c) => c.type !== 'opinion');
-  if (!checkable.length) return { verdicts: [], model: '', passes: [], failedPasses: 0 };
+  if (!checkable.length) return { verdicts: [], model: '', models: [], passes: [], failedPasses: 0 };
   const today = opts.today ?? new Date().toISOString().slice(0, 10);
   const outcomes = await mapLimit(Array.from({ length: Math.max(1, opts.passes ?? 1) }), 2, async (_, i) => {
     const ordered = i % 2 === 0 ? checkable : [...checkable].reverse();
@@ -175,5 +178,5 @@ export async function verifyClaims(
   const done = outcomes.flatMap((o) => (o.ok ? [o] : []));
   if (!done.length) throw (outcomes.find((o) => !o.ok) as { error: unknown }).error;
   const passes = done.map((o) => o.verdicts);
-  return { verdicts: combineVerdicts(passes, checkable), model: done[0].model, passes, failedPasses: outcomes.length - done.length };
+  return { verdicts: combineVerdicts(passes, checkable), model: done[0].model, models: [...new Set(done.map((o) => o.model))], passes, failedPasses: outcomes.length - done.length };
 }

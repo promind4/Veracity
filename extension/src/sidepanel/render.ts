@@ -109,7 +109,7 @@ export function renderReport(root: HTMLElement, r: Report): void {
       ${reliabilityLine(r.scores)}
       ${gauge('Honnêteté du discours', r.scores.discourse, `${r.rhetoric.length} procédé(s) de persuasion détecté(s)`)}
       <div class="actions"><button data-action="reanalyze">Ré-analyser</button><button data-action="export-report">Exporter (.md)</button><button data-action="open-channels" title="Note la chaîne sur un échantillon de ses vidéos">📺 Chaîne</button><button data-action="options">Options</button></div>
-      <small class="muted">${new Date(r.createdAt).toLocaleString('fr-FR')} · ${esc(r.models.join(', '))}</small>
+      <small class="muted">${new Date(r.createdAt).toLocaleString('fr-FR')} · ${r.modelsByStage ? `Extraction : ${esc(r.modelsByStage.extraction)} · Vérification : ${esc(r.modelsByStage.verification.join(', ') || 'aucun passage')}` : esc(r.models.join(', '))}</small>
     </header>
     ${r.warnings.length ? `<div class="warnings">${r.warnings.map((w) => `<p>⚠️ ${esc(w)}</p>`).join('')}</div>` : ''}
     <section><h2>Résumé</h2><p>${esc(r.summary)}</p></section>

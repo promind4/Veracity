@@ -8,11 +8,11 @@ interface SerperOrganic {
   date?: string;
 }
 
-export async function serperSearch(q: string, key: string, lang: string, fetchFn: FetchFn = fetch): Promise<RawEvidence[]> {
+export async function serperSearch(q: string, key: string, lang: string, fetchFn: FetchFn = fetch, recent = false): Promise<RawEvidence[]> {
   const res = await fetchFn('https://google.serper.dev/search', {
     method: 'POST',
     headers: { 'X-API-KEY': key, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ q, gl: countryFor(lang), hl: lang, num: 5 }),
+    body: JSON.stringify({ q, gl: countryFor(lang), hl: lang, num: 5, ...(recent ? { tbs: 'qdr:w' } : {}) }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data: { organic?: SerperOrganic[] } = await res.json();
